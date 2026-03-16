@@ -319,8 +319,6 @@ export function processGlimmerTemplate(
           loc: toFileLoc(n.range),
         };
       });
-      // Alias for ember-eslint-parser scope registration compatibility
-      n.params = n.blockParamNodes;
     }
 
     // Nullify empty hashes

@@ -60,7 +60,6 @@ describe("AST snapshots — individual Glimmer nodes", () => {
           },
         ],
         "comments": [],
-        "params": [],
         "type": "GlimmerTemplate",
       }
     `);
@@ -87,7 +86,6 @@ describe("AST snapshots — individual Glimmer nodes", () => {
         "comments": [],
         "modifiers": [],
         "name": "h1",
-        "params": [],
         "parts": [
           {
             "name": "h1",
@@ -209,7 +207,6 @@ describe("AST snapshots — full templates (positions stripped)", () => {
             "comments": [],
             "modifiers": [],
             "name": "h1",
-            "params": [],
             "parts": [
               {
                 "name": "h1",
@@ -223,7 +220,6 @@ describe("AST snapshots — full templates (positions stripped)", () => {
           },
         ],
         "comments": [],
-        "params": [],
         "type": "GlimmerTemplate",
       }
     `);
@@ -284,7 +280,6 @@ describe("AST snapshots — full templates (positions stripped)", () => {
             "comments": [],
             "modifiers": [],
             "name": "div",
-            "params": [],
             "parts": [
               {
                 "name": "div",
@@ -298,7 +293,6 @@ describe("AST snapshots — full templates (positions stripped)", () => {
           },
         ],
         "comments": [],
-        "params": [],
         "type": "GlimmerTemplate",
       }
     `);
@@ -420,7 +414,6 @@ describe("AST snapshots — JS/TS wrapper nodes", () => {
                 },
               ],
               "comments": [],
-              "params": [],
               "type": "GlimmerTemplate",
             },
             "type": "VariableDeclarator",
