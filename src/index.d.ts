@@ -102,3 +102,33 @@ export function buildGlimmerVisitorKeys(): Record<string, string[]>;
  * Mutates the tree in place and returns it.
  */
 export function removeParentReferences(ast: ASTNode): ASTNode;
+
+/**
+ * Options for processGlimmerTemplateFromSource.
+ */
+export interface ProcessGlimmerTemplateOptions {
+  /** Byte offset where the template content begins in the full source. */
+  contentOffset: number;
+  /** [start, end] byte range of the full template block (including tags if present). */
+  templateRange: [number, number];
+  /** The full source code of the file. */
+  source: string;
+  /** Byte offset where content ends. Defaults to templateRange[1] - "</template>".length. */
+  contentEnd?: number;
+}
+
+/**
+ * Parse a raw template content string and process it into an ESTree-compatible
+ * Glimmer AST with range/loc fixing, type prefixing, and tokenization.
+ *
+ * This is the main entry point for consumers that need to process standalone
+ * template content (e.g. .hbs files or template regions extracted by content-tag).
+ *
+ * @param content The raw template content (inner content, without <template> tags).
+ * @param opts Processing options including offsets and source.
+ * @returns The transformed AST with .tokens and .comments attached.
+ */
+export function processGlimmerTemplateFromSource(
+  content: string,
+  opts: ProcessGlimmerTemplateOptions,
+): ASTNode;
