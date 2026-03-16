@@ -10,9 +10,11 @@
  *  - blockParams → virtual node creation
  *  - Empty hash nullification
  *  - Empty text node removal
+ *  - Tokenization for ESLint integration
  */
 
 import { traverse, visitorKeys as glimmerVisitorKeys } from "@glimmer/syntax";
+import templateRecast from "ember-template-recast";
 
 /**
  * Converts between character offsets and line/column positions.
@@ -42,6 +44,124 @@ export class DocumentLines {
     }
     return { line: lo + 1, column: offset - this.lineStarts[lo] };
   }
+}
+
+// ── Tokenization helpers (shared with ember-eslint-parser) ──
+
+function isAlphaNumeric(code) {
+  return !(
+    !(code > 47 && code < 58) && // numeric (0-9)
+    !(code > 64 && code < 91) && // upper alpha (A-Z)
+    !(code > 96 && code < 123)
+  );
+}
+
+function isWhiteSpaceCode(code) {
+  return (
+    code === 32 /* space */ ||
+    code === 9 /* tab */ ||
+    code === 13 /* carriageReturn */ ||
+    code === 10 /* lineFeed */ ||
+    code === 11 /* verticalTab */
+  );
+}
+
+/**
+ * Simple tokenizer for templates — splits into words and punctuators.
+ * @param {string} template
+ * @param {DocumentLines} doc
+ * @param {number} startOffset
+ * @return {object[]}
+ */
+export function tokenize(template, doc, startOffset) {
+  const tokens = [];
+  let wordStart = -1;
+  function pushToken(value, type, range) {
+    tokens.push({
+      type,
+      value,
+      range,
+      start: range[0],
+      end: range[1],
+      loc: {
+        start: { ...doc.offsetToPosition(range[0]), index: range[0] },
+        end: { ...doc.offsetToPosition(range[1]), index: range[1] },
+      },
+    });
+  }
+  for (let i = 0; i < template.length; i++) {
+    const code = template.charCodeAt(i);
+    if (isAlphaNumeric(code)) {
+      if (wordStart < 0) {
+        wordStart = i;
+      }
+    } else {
+      if (wordStart >= 0) {
+        pushToken(template.slice(wordStart, i), "word", [startOffset + wordStart, startOffset + i]);
+        wordStart = -1;
+      }
+      if (!isWhiteSpaceCode(code)) {
+        pushToken(template[i], "Punctuator", [startOffset + i, startOffset + i + 1]);
+      }
+    }
+  }
+  if (wordStart >= 0) {
+    pushToken(template.slice(wordStart), "word", [
+      startOffset + wordStart,
+      startOffset + template.length,
+    ]);
+  }
+  return tokens;
+}
+
+/**
+ * Builds the final token stream by filtering out tokens covered by comments
+ * or text nodes, then merging text nodes back in sorted order.
+ * @param {object[]} rawTokens
+ * @param {object[]} comments
+ * @param {object[]} textNodes
+ * @return {object[]}
+ */
+export function buildTokenStream(rawTokens, comments, textNodes) {
+  const commentIntervals = comments.map((c) => c.range).sort((a, b) => a[0] - b[0]);
+  const textNodeIntervals = textNodes.map((t) => t.range).sort((a, b) => a[0] - b[0]);
+
+  function isCovered(tokenRange, intervals) {
+    let lo = 0;
+    let hi = intervals.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const iv = intervals[mid];
+      if (iv[0] <= tokenRange[0] && iv[1] >= tokenRange[1]) {
+        return true;
+      }
+      if (iv[0] > tokenRange[0]) {
+        hi = mid - 1;
+      } else {
+        lo = mid + 1;
+      }
+    }
+    return false;
+  }
+
+  const filteredTokens = rawTokens.filter(
+    (t) => !isCovered(t.range, commentIntervals) && !isCovered(t.range, textNodeIntervals),
+  );
+
+  const sortedTextNodes = [...textNodes].sort((a, b) => a.range[0] - b.range[0]);
+  const result = [];
+  let ti = 0;
+  for (const token of filteredTokens) {
+    while (ti < sortedTextNodes.length && sortedTextNodes[ti].range[0] < token.range[0]) {
+      result.push(sortedTextNodes[ti++]);
+    }
+    result.push(token);
+  }
+  while (ti < sortedTextNodes.length) {
+    result.push(sortedTextNodes[ti++]);
+  }
+
+  return result;
 }
 
 /**
@@ -116,12 +236,15 @@ export function buildGlimmerVisitorKeys() {
  * @param {number} opts.contentOffset - Byte offset where the template content begins in the full source
  * @param {[number, number]} opts.templateRange - [start, end] byte range of the full <template>...</template> block
  * @param {string} opts.source - The full source code
- * @returns {object} The transformed AST
+ * @param {number} [opts.contentEnd] - Byte offset where content ends (defaults to templateRange[1] - "</template>".length)
+ * @returns {object} The transformed AST with .tokens and .comments attached
  */
-export function processGlimmerTemplate(templateAST, { contentOffset, templateRange, source }) {
+export function processGlimmerTemplate(
+  templateAST,
+  { contentOffset, templateRange, source, contentEnd: contentEndOpt },
+) {
   // The Glimmer AST locs are relative to the inner template content only
-  const closingTagLen = "</template>".length;
-  const contentEnd = templateRange[1] - closingTagLen;
+  const contentEnd = contentEndOpt ?? templateRange[1] - "</template>".length;
   const contentStr = source.substring(contentOffset, contentEnd);
   const contentDoc = new DocumentLines(contentStr);
   const sourceDoc = new DocumentLines(source);
@@ -139,7 +262,7 @@ export function processGlimmerTemplate(templateAST, { contentOffset, templateRan
     end: sourceDoc.offsetToPosition(range[1]),
   });
 
-  const { allNodes, comments, emptyTextNodes } = collectNodes(templateAST);
+  const { allNodes, comments, textNodes, emptyTextNodes } = collectNodes(templateAST);
 
   for (const n of allNodes) {
     const loc = n.loc.toJSON ? n.loc.toJSON() : n.loc;
@@ -196,6 +319,8 @@ export function processGlimmerTemplate(templateAST, { contentOffset, templateRan
           loc: toFileLoc(n.range),
         };
       });
+      // Alias for ember-eslint-parser scope registration compatibility
+      n.params = n.blockParamNodes;
     }
 
     // Nullify empty hashes
@@ -221,5 +346,28 @@ export function processGlimmerTemplate(templateAST, { contentOffset, templateRan
     comment.type = "Block";
   }
 
+  // Build token stream from the full <template>...</template> range
+  const fullTemplateStr = source.slice(templateRange[0], templateRange[1]);
+  templateAST.tokens = buildTokenStream(
+    tokenize(fullTemplateStr, sourceDoc, templateRange[0]),
+    comments,
+    textNodes,
+  );
+  templateAST.contents = contentStr;
+  templateAST.comments = comments;
+
   return templateAST;
+}
+
+/**
+ * Higher-level wrapper that parses a raw template content string and processes it.
+ * Consumers don't need to depend on ember-template-recast directly.
+ *
+ * @param {string} content - The raw template content (inner content, without <template> tags)
+ * @param {object} opts - Same options as processGlimmerTemplate
+ * @returns {object} The transformed AST with .tokens and .comments attached
+ */
+export function processGlimmerTemplateFromSource(content, opts) {
+  const templateAST = templateRecast.parse(content);
+  return processGlimmerTemplate(templateAST, opts);
 }

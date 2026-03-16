@@ -48,6 +48,50 @@ describe("parse", () => {
     checkStartEnd(ast);
   });
 
+  it("all typed nodes have range and loc", () => {
+    const source = `const x = <template><h1>Hello</h1></template>;`;
+    const ast = parse(source);
+
+    function checkRangeAndLoc(node, visited = new Set()) {
+      if (!node || typeof node !== "object" || visited.has(node)) return;
+      visited.add(node);
+      if (node.type && typeof node.start === "number") {
+        expect(node.range).toEqual([node.start, node.end]);
+        expect(node.loc).toBeDefined();
+        expect(node.loc.start).toHaveProperty("line");
+        expect(node.loc.start).toHaveProperty("column");
+        expect(node.loc.end).toHaveProperty("line");
+        expect(node.loc.end).toHaveProperty("column");
+      }
+      for (const key of Object.keys(node)) {
+        if (key === "loc" || key === "parent") continue;
+        const val = node[key];
+        if (Array.isArray(val)) {
+          for (const item of val) checkRangeAndLoc(item, visited);
+        } else if (val && typeof val === "object" && val.type) {
+          checkRangeAndLoc(val, visited);
+        }
+      }
+    }
+    checkRangeAndLoc(ast);
+  });
+
+  it("JS nodes have correct loc values", () => {
+    const source = `const x = <template>hi</template>;`;
+    const ast = parse(source);
+    const decl = ast.program.body[0];
+
+    // VariableDeclaration spans the whole line
+    expect(decl.range).toEqual([0, 34]);
+    expect(decl.loc.start).toEqual({ line: 1, column: 0 });
+    expect(decl.loc.end).toEqual({ line: 1, column: 34 });
+
+    // Identifier "x" at column 6
+    const id = decl.declarations[0].id;
+    expect(id.range).toEqual([6, 7]);
+    expect(id.loc.start).toEqual({ line: 1, column: 6 });
+  });
+
   it("removeParentReferences removes circular parent references", () => {
     const source = `const x = <template><h1>Hello</h1></template>;`;
     const ast = parse(source);

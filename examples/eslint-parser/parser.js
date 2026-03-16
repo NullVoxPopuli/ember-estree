@@ -12,40 +12,9 @@
  * @see https://eslint.org/docs/latest/extend/custom-parsers
  * @see https://github.com/ember-tooling/ember-eslint-parser
  */
-import { parse, buildGlimmerVisitorKeys, DocumentLines } from "ember-estree";
+import { parse, buildGlimmerVisitorKeys } from "ember-estree";
 import { analyze, Reference, Scope, Variable, Definition } from "eslint-scope";
 import { isKeyword } from "@glimmer/syntax";
-
-/**
- * Recursively add `range: [start, end]` and `loc` to every AST node that has
- * `start`/`end` but is missing them. ESLint requires both on all nodes.
- */
-function addRangesAndLocs(node, docLines, visited = new Set()) {
-  if (!node || typeof node !== "object" || visited.has(node)) return;
-  visited.add(node);
-
-  if (node.type && typeof node.start === "number" && typeof node.end === "number") {
-    if (!node.range) {
-      node.range = [node.start, node.end];
-    }
-    if (!node.loc) {
-      node.loc = {
-        start: docLines.offsetToPosition(node.start),
-        end: docLines.offsetToPosition(node.end),
-      };
-    }
-  }
-
-  for (const key of Object.keys(node)) {
-    if (key === "loc" || key === "parent" || key === "tokens" || key === "comments") continue;
-    const val = node[key];
-    if (Array.isArray(val)) {
-      for (const item of val) addRangesAndLocs(item, docLines, visited);
-    } else if (val && typeof val === "object") {
-      addRangesAndLocs(val, docLines, visited);
-    }
-  }
-}
 
 /**
  * Merge the Glimmer-prefixed visitor keys with a base set.
@@ -238,12 +207,7 @@ export function parseForESLint(code, options = {}) {
   // ESLint expects a Program node as the root.
   const program = ast.program;
 
-  // ESLint requires `range: [start, end]` and `loc` on all AST nodes.
-  // oxc-parser only sets `start`/`end`. Walk the tree to add both.
-  const docLines = new DocumentLines(code);
-  addRangesAndLocs(program, docLines);
-
-  // Ensure required ESLint properties exist
+  // Ensure required ESLint properties exist on tokens and comments
   program.tokens = (program.tokens || ast.tokens || []).map((t) => ({
     ...t,
     range: t.range || [t.start, t.end],
@@ -253,11 +217,6 @@ export function parseForESLint(code, options = {}) {
     ...c,
     range: c.range || [c.start, c.end],
   }));
-  program.range = program.range || [program.start, program.end];
-  program.loc = program.loc || {
-    start: { line: 1, column: 0 },
-    end: docLines.offsetToPosition(code.length),
-  };
 
   const visitorKeys = mergeVisitorKeys();
 

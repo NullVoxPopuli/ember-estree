@@ -30,7 +30,7 @@ import templateRecast from "ember-template-recast";
 import { Preprocessor } from "content-tag";
 import { walk } from "zimmerframe";
 
-import { processGlimmerTemplate } from "./transforms.js";
+import { DocumentLines, processGlimmerTemplate } from "./transforms.js";
 
 const preprocessor = new Preprocessor();
 
@@ -58,6 +58,7 @@ export function toTree(source, options = {}) {
   // content-tag v4 provides UTF-16 codepoint offsets that match
   // JavaScript string indices and oxc-parser character offsets directly,
   // so no byte-to-character conversion is needed.
+  const docLines = new DocumentLines(source);
   outerAST = walk(outerAST, null, {
     _(node, { next }) {
       if (isExpressionPlaceholder(node) || isClassMemberPlaceholder(node)) {
@@ -82,13 +83,25 @@ export function toTree(source, options = {}) {
           source,
         });
       }
+
+      // Ensure all nodes have `range` and `loc` (oxc-parser only sets start/end).
+      // Glimmer nodes already have these from processGlimmerTemplate.
+      if (typeof node.start === "number" && typeof node.end === "number") {
+        if (!node.range) {
+          node.range = [node.start, node.end];
+        }
+        if (!node.loc) {
+          node.loc = {
+            start: docLines.offsetToPosition(node.start),
+            end: docLines.offsetToPosition(node.end),
+          };
+        }
+      }
       next();
     },
   });
 
-  let ast = outerAST;
-
-  return ast;
+  return outerAST;
 }
 
 /**
