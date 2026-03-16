@@ -66,6 +66,16 @@ The [`examples/`](./examples) directory contains ready-to-run integrations:
 | [`eslint-parser`](./examples/eslint-parser) | Custom ESLint parser that understands `<template>`                   |
 | [`zmod`](./examples/zmod)                   | Codemod toolkit using [zmod](https://github.com/nicolo-ribaudo/zmod) |
 
+## Caveats
+
+### Synthetic AST nodes
+
+The Glimmer AST produced by `@glimmer/syntax` is transformed to be ESTree-compatible. Most of this is mechanical (type prefixing, range/loc fixing), but a few **synthetic nodes** are created that do not exist in the original Glimmer AST:
+
+- **`GlimmerElementNodePart`** — Added to `GlimmerElementNode.parts[]`. Represents the tag name with its own `range`/`loc` pointing to just the name in the source (e.g. `MyComponent` inside `<MyComponent ...>`). This exists so that tools like ESLint can point error messages at the tag name rather than the entire element including its children and closing tag.
+
+- **`GlimmerBlockParam`** — Added to `blockParamNodes[]` (and aliased as `params[]`) on nodes that have `blockParams`. These are virtual nodes created from the `blockParams` string array since the Glimmer AST does not provide individual location info for block parameter names.
+
 ## License
 
 MIT
