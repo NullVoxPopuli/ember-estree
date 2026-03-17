@@ -369,3 +369,35 @@ export function processGlimmerTemplateFromSource(content, opts) {
   const templateAST = templateRecast.parse(content);
   return processGlimmerTemplate(templateAST, opts);
 }
+
+/**
+ * Process all template regions from content-tag parse results in one pass.
+ *
+ * Returns an array of `{ utf16Range, ast, comments }` objects — one per template.
+ *
+ * @param {object[]} parseResults - Results from content-tag's Preprocessor.parse()
+ * @param {string} source - The full source code
+ * @returns {{ templateInfos: object[], comments: object[], visitorKeys: Record<string, string[]> }}
+ */
+export function preprocessTemplates(parseResults, source) {
+  const templateInfos = [];
+  const allComments = [];
+
+  for (const r of parseResults) {
+    const utf16Range = [r.range.startUtf16Codepoint, r.range.endUtf16Codepoint];
+
+    const ast = processGlimmerTemplateFromSource(r.contents, {
+      contentOffset: r.contentRange.startUtf16Codepoint,
+      templateRange: [...utf16Range],
+      source,
+    });
+
+    allComments.push(...(ast.comments || []));
+    templateInfos.push({ utf16Range, ast });
+  }
+
+  return {
+    templateInfos,
+    comments: allComments,
+  };
+}
