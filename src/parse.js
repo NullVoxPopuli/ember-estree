@@ -26,11 +26,10 @@
  */
 
 import { parseSync } from "oxc-parser";
-import templateRecast from "ember-template-recast";
 import { Preprocessor } from "content-tag";
 import { walk } from "zimmerframe";
 
-import { DocumentLines, processGlimmerTemplate } from "./transforms.js";
+import { DocumentLines, processGlimmerTemplateFromSource } from "./transforms.js";
 
 const preprocessor = new Preprocessor();
 
@@ -68,18 +67,12 @@ export function toTree(source, options = {}) {
           );
         });
 
-        let content = parseResult.contents;
-        let templateAST = templateRecast.parse(content);
-
-        let contentOffset = parseResult.contentRange.startUtf16Codepoint;
-        let templateRange = [
-          parseResult.range.startUtf16Codepoint,
-          parseResult.range.endUtf16Codepoint,
-        ];
-
-        return processGlimmerTemplate(templateAST, {
-          contentOffset,
-          templateRange,
+        return processGlimmerTemplateFromSource(parseResult.contents, {
+          contentOffset: parseResult.contentRange.startUtf16Codepoint,
+          templateRange: [
+            parseResult.range.startUtf16Codepoint,
+            parseResult.range.endUtf16Codepoint,
+          ],
           source,
         });
       }
