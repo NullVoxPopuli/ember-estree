@@ -27,6 +27,9 @@ importers:
       '@tsconfig/node-lts':
         specifier: ^22.0.2
         version: 22.0.2
+      eslint-scope:
+        specifier: ^9.1.2
+        version: 9.1.2
       mitata:
         specifier: ^1.0.34
         version: 1.0.34
