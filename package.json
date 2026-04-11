@@ -27,6 +27,14 @@
     ".": {
       "types": "./src/index.d.ts",
       "default": "./src/index.js"
+    },
+    "./scope": {
+      "types": "./src/scope.d.ts",
+      "default": "./src/scope.js"
+    },
+    "./eslint-scope": {
+      "types": "./src/eslint-scope.d.ts",
+      "default": "./src/eslint-scope.js"
     }
   },
   "scripts": {
@@ -48,6 +56,7 @@
   "devDependencies": {
     "@tsconfig/node-lts": "^22.0.2",
     "@typescript-eslint/parser": "^8.59.0",
+    "eslint-scope": "^9.1.2",
     "mitata": "^1.0.34",
     "oxfmt": "^0.40.0",
     "oxlint": "^1.55.0",
@@ -56,6 +65,14 @@
     "typescript": "^5.9.3",
     "vitest": "^3.2.4",
     "zimmerframe": "^1.1.4"
+  },
+  "peerDependencies": {
+    "eslint-scope": "^8.0.0 || ^9.0.0"
+  },
+  "peerDependenciesMeta": {
+    "eslint-scope": {
+      "optional": true
+    }
   },
   "packageManager": "pnpm@10.18.2"
 }
