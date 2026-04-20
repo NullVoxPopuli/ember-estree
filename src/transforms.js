@@ -329,10 +329,6 @@ export function processTemplate(
   visit(ast, null);
 
   removeFromParent(emptyTextNodes);
-  removeFromParent(comments);
-  for (const comment of comments) {
-    comment.type = "Block";
-  }
 
   ast.tokens = buildTokenStream(tokenize(templateContent, codeLines, offset), comments, textNodes);
   ast.contents = templateContent;
