@@ -143,8 +143,11 @@ export function toTree(source, options = {}) {
     ? new Map(parseResults.map((r) => [r.range.startUtf16Codepoint, r]))
     : null;
 
-  // Process a matched placeholder node: create Glimmer AST and tokens
-  function processPlaceholder(parseResult) {
+  // Process a matched placeholder node: create Glimmer AST and tokens.
+  // `placeholderNode` is the original JS/TS node being swapped out; we stash
+  // it on templateInfos so consumers can forward its parser-services mapping
+  // (e.g. esTreeNodeToTSNodeMap) onto the GlimmerTemplate that replaces it.
+  function processPlaceholder(parseResult, placeholderNode) {
     let templateContent = parseResult.contents;
     let contentRange = [
       parseResult.contentRange.startUtf16Codepoint,
@@ -190,7 +193,7 @@ export function toTree(source, options = {}) {
       ];
     }
 
-    templateInfos.push({ utf16Range: fullRange, ast });
+    templateInfos.push({ utf16Range: fullRange, ast, placeholder: placeholderNode });
     return ast;
   }
 
@@ -217,7 +220,7 @@ export function toTree(source, options = {}) {
       if (hasTemplates && PLACEHOLDER_TYPES.has(node.type)) {
         const parseResult = matchPlaceholder(node);
         if (parseResult) {
-          const ast = processPlaceholder(parseResult);
+          const ast = processPlaceholder(parseResult, node);
           // Splice in place: write the GlimmerTemplate directly into the
           // parent's slot instead of returning it from the visitor. Returning
           // would trigger zimmerframe's apply_mutations, which shallow-clones

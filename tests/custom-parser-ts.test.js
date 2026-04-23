@@ -114,6 +114,46 @@ describe("toTree — custom parser (typescript-eslint) — scope manager", () =>
   });
 });
 
+describe("toTree — custom parser (typescript-eslint) — templateInfos.placeholder", () => {
+  it("exposes the original placeholder node for each spliced template", () => {
+    const source = `const Bar = () => <template>hi</template>;`;
+    let capturedPlaceholder;
+    const result = toTree(source, {
+      parser: (js) => {
+        const parsed = tsParseForESLint(js);
+        // Capture the ArrowFunctionExpression body's placeholder (TemplateLiteral)
+        capturedPlaceholder = parsed.ast.body[0].declarations[0].init.body;
+        expect(capturedPlaceholder.type).toBe("TemplateLiteral");
+        return parsed;
+      },
+    });
+
+    expect(result.templateInfos).toHaveLength(1);
+    expect(result.templateInfos[0].placeholder).toBe(capturedPlaceholder);
+    expect(result.templateInfos[0].ast.type).toBe("GlimmerTemplate");
+  });
+
+  it("lets consumers forward esTreeNodeToTSNodeMap onto GlimmerTemplate in one step", () => {
+    const source = `const Bar = () => <template>hi</template>;`;
+    const result = toTree(source, { parser: tsParseForESLint });
+
+    const esMap = result.services.esTreeNodeToTSNodeMap;
+    // Before forwarding: GlimmerTemplate has no TS mapping.
+    expect(esMap.get(result.templateInfos[0].ast)).toBeUndefined();
+    // Forward: one line using templateInfos.placeholder.
+    for (const ti of result.templateInfos) {
+      const ts = esMap.get(ti.placeholder);
+      if (ts) esMap.set(ti.ast, ts);
+    }
+    // After: the GlimmerTemplate resolves to the placeholder's TS node.
+    const glimmerTS = esMap.get(result.templateInfos[0].ast);
+    expect(glimmerTS).toBeDefined();
+    // The placeholder was a TemplateLiteral (backtick) whose TS node is a
+    // string-typed expression — good enough for typed rules.
+    expect(glimmerTS).toBe(esMap.get(result.templateInfos[0].placeholder));
+  });
+});
+
 describe("toTree — custom parser (typescript-eslint) — services (esTreeNodeToTSNodeMap)", () => {
   it("every outer-AST node resolvable before the walk is still resolvable after", () => {
     const source = `const Bar = () => <template></template>;
