@@ -15,6 +15,37 @@ import { walk } from "zimmerframe";
 
 import { processTemplate, DocumentLines, glimmerVisitorKeys } from "./transforms.js";
 
+// Non-enumerable parent descriptor — matches setParent in transforms.js.
+// Kept hidden from enumeration so zimmerframe's `for (key in node)` walk
+// doesn't follow it back up and loop.
+const _parentDesc = { value: null, configurable: true, enumerable: false, writable: true };
+function setParent(node, parent) {
+  _parentDesc.value = parent;
+  Object.defineProperty(node, "parent", _parentDesc);
+}
+
+// Swap `oldNode` for `newNode` in whichever slot of `parent` currently holds it.
+// Used to splice a GlimmerTemplate directly into the outer AST without
+// allocating new ancestor objects — keeps WeakMap-keyed data (scope manager,
+// esTreeNodeToTSNodeMap) attached to the existing nodes.
+function replaceInParent(parent, oldNode, newNode) {
+  for (const key of Object.keys(parent)) {
+    const v = parent[key];
+    if (v === oldNode) {
+      parent[key] = newNode;
+      return true;
+    }
+    if (Array.isArray(v)) {
+      const idx = v.indexOf(oldNode);
+      if (idx !== -1) {
+        v[idx] = newNode;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 const preprocessor = new Preprocessor();
 
 // Node types that placeholders parse into (backtick/static-block format)
@@ -187,20 +218,22 @@ export function toTree(source, options = {}) {
         const parseResult = matchPlaceholder(node);
         if (parseResult) {
           const ast = processPlaceholder(parseResult);
-          // Zimmerframe treats a visitor that returns a node as having
-          // taken responsibility for the subtree — it splices the result
-          // in but does NOT descend into it. So when any handlers are
-          // configured we re-enter the walk manually via `visit()` to
-          // dispatch them across the Glimmer nodes. With no handlers the
-          // walk would be pure overhead, so just return the subtree.
-          //
-          // Pass `state` (the placeholder's inherited parent context) so the
-          // Glimmer root's parentPath reflects its true JS parent. The
+          // Splice in place: write the GlimmerTemplate directly into the
+          // parent's slot instead of returning it from the visitor. Returning
+          // would trigger zimmerframe's apply_mutations, which shallow-clones
+          // every ancestor up to the root — orphaning any WeakMap-keyed data
+          // held by custom parsers (scope manager, esTreeNodeToTSNodeMap).
+          // In-place mutation preserves node identity for all ancestors.
+          const parent = state?.parentPath?.node ?? null;
+          if (parent) replaceInParent(parent, node, ast);
+          setParent(ast, parent);
+          // Dispatch visitors on the Glimmer subtree. We pass `state` so the
+          // Glimmer root's parentPath reflects its true JS parent — the
           // placeholder (TemplateLiteral / StaticBlock) is an internal
-          // artifact — the GlimmerTemplate logically lives where the
-          // placeholder was, so its parent is e.g. VariableDeclarator or
-          // ClassBody, not the placeholder itself.
-          return hasVisitors ? visit(ast, state) : ast;
+          // artifact. Not returning anything keeps apply_mutations from
+          // firing up the ancestor chain.
+          if (hasVisitors) visit(ast, state);
+          return;
         }
       }
 
@@ -240,8 +273,11 @@ export function toTree(source, options = {}) {
   // original source byte-for-byte across JS and Glimmer regions.
   //
   // Tokens are sorted by range, so use binary search for O(log n) lookup.
+  // Only splice if the caller asked for tokens — otherwise `ti.ast.tokens`
+  // wasn't populated by processPlaceholder, and a custom parser may still
+  // have returned its own token stream we shouldn't touch.
   const astRoot = result.ast.program || result.ast;
-  if (astRoot.tokens) {
+  if (generateTokens && astRoot.tokens) {
     for (const ti of templateInfos) {
       const [tStart, tEnd] = ti.utf16Range;
       const tokens = astRoot.tokens;
