@@ -13,16 +13,7 @@ import { parseSync } from "oxc-parser";
 import { Preprocessor } from "content-tag";
 import { walk } from "zimmerframe";
 
-import { processTemplate, DocumentLines, glimmerVisitorKeys } from "./transforms.js";
-
-// Non-enumerable parent descriptor — matches setParent in transforms.js.
-// Kept hidden from enumeration so zimmerframe's `for (key in node)` walk
-// doesn't follow it back up and loop.
-const _parentDesc = { value: null, configurable: true, enumerable: false, writable: true };
-function setParent(node, parent) {
-  _parentDesc.value = parent;
-  Object.defineProperty(node, "parent", _parentDesc);
-}
+import { processTemplate, DocumentLines, glimmerVisitorKeys, setParent } from "./transforms.js";
 
 // Swap `oldNode` for `newNode` in whichever slot of `parent` currently holds it.
 // Used to splice a GlimmerTemplate directly into the outer AST without
