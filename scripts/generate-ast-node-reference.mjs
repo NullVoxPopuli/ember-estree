@@ -60,15 +60,6 @@ const groups = [
     blurb:
       "Nodes produced inside `<template>...</template>` regions by `@glimmer/syntax`, prefixed with `Glimmer` when spliced into the ESTree.",
   },
-  {
-    id: "jsx",
-    title: "JSX",
-    scope: "not used in <code>.gjs</code> / <code>.gts</code>",
-    match: (name) => name.startsWith("JSX"),
-    source: oxcVisitorKeys,
-    blurb:
-      "Listed here for completeness. `oxc-parser` knows these types, but `.gjs` and `.gts` files use Glimmer `<template>` tags rather than JSX — so a correctly-authored Ember file will not contain them.",
-  },
 ];
 
 function formatKeys(keys) {

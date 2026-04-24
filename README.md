@@ -196,7 +196,7 @@ The [`examples/`](./examples) directory contains ready-to-run integrations:
 ## AST node reference
 
 <details>
-<summary><strong>Every AST node</strong> ember-estree may emit (186 total) — grouped by which files they appear in</summary>
+<summary><strong>Every AST node</strong> ember-estree may emit (171 total) — grouped by which files they appear in</summary>
 
 Generated from `oxc-parser`'s and `@glimmer/syntax`'s visitor-key maps. Re-run `node scripts/generate-ast-node-reference.mjs` after bumping either dependency to keep this in sync.
 
@@ -398,31 +398,6 @@ Nodes produced inside `<template>...</template>` regions by `@glimmer/syntax`, p
 | `GlimmerTemplate`                 | `body`                                                                        |
 | `GlimmerTextNode`                 | _(leaf)_                                                                      |
 | `GlimmerUndefinedLiteral`         | _(leaf)_                                                                      |
-
-</details>
-
-<details>
-<summary><strong>JSX</strong> — not used in <code>.gjs</code> / <code>.gts</code> (15 nodes)</summary>
-
-Listed here for completeness. `oxc-parser` knows these types, but `.gjs` and `.gts` files use Glimmer `<template>` tags rather than JSX — so a correctly-authored Ember file will not contain them.
-
-| Node                     | Child keys                                       |
-| ------------------------ | ------------------------------------------------ |
-| `JSXAttribute`           | `name`, `value`                                  |
-| `JSXClosingElement`      | `name`                                           |
-| `JSXClosingFragment`     | _(leaf)_                                         |
-| `JSXElement`             | `openingElement`, `children`, `closingElement`   |
-| `JSXEmptyExpression`     | _(leaf)_                                         |
-| `JSXExpressionContainer` | `expression`                                     |
-| `JSXFragment`            | `openingFragment`, `children`, `closingFragment` |
-| `JSXIdentifier`          | _(leaf)_                                         |
-| `JSXMemberExpression`    | `object`, `property`                             |
-| `JSXNamespacedName`      | `namespace`, `name`                              |
-| `JSXOpeningElement`      | `name`, `typeArguments`, `attributes`            |
-| `JSXOpeningFragment`     | _(leaf)_                                         |
-| `JSXSpreadAttribute`     | `argument`                                       |
-| `JSXSpreadChild`         | `expression`                                     |
-| `JSXText`                | _(leaf)_                                         |
 
 </details>
 
