@@ -3,9 +3,20 @@ name: Benchmark Comparison
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      experiment_ref:
+        description: "Experiment ref to benchmark (branch, tag, or commit SHA)"
+        required: true
+        type: string
+      base_ref:
+        description: "Control ref to compare against (branch, tag, or commit SHA)"
+        required: false
+        default: "main"
+        type: string
 
 concurrency:
-  group: bench-${{ github.head_ref }}
+  group: bench-${{ github.head_ref || github.event.inputs.experiment_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -22,9 +33,10 @@ jobs:
         with:
           # Full history so the script can git-archive the base branch.
           fetch-depth: 0
-          # Use the PR head SHA so fork PRs resolve correctly
+          # For pull_request: use the PR head SHA so fork PRs resolve correctly
           # (github.head_ref is a branch name that only exists on the fork remote).
-          ref: ${{ github.event.pull_request.head.sha }}
+          # For workflow_dispatch: use the user-selected experiment ref.
+          ref: ${{ github.event.inputs.experiment_ref || github.event.pull_request.head.sha }}
 
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -37,9 +49,14 @@ jobs:
       - name: Run benchmark comparison
         env:
           BENCH_JSON_OUTPUT: ${{ runner.temp }}/bench-results.json
+          BENCH_BASE_REF: ${{ github.event.inputs.base_ref }}
         run: |
           set -o pipefail
-          pnpm bench:compare | sed 's/\x1b\[[0-9;]*m//g' > "$RUNNER_TEMP/bench-output.txt"
+          if [ -n "$BENCH_BASE_REF" ]; then
+            pnpm bench:compare --base "$BENCH_BASE_REF" | sed 's/\x1b\[[0-9;]*m//g' > "$RUNNER_TEMP/bench-output.txt"
+          else
+            pnpm bench:compare | sed 's/\x1b\[[0-9;]*m//g' > "$RUNNER_TEMP/bench-output.txt"
+          fi
 
       - name: Format PR comment
         if: always() && steps.checkout.outcome == 'success'
@@ -54,7 +71,7 @@ jobs:
         run: cat "$RUNNER_TEMP/bench-comment.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Post PR comment
-        if: always() && steps.checkout.outcome == 'success'
+        if: always() && steps.checkout.outcome == 'success' && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
