@@ -2,6 +2,22 @@
 
 ## Release (2026-04-24)
 
+* ember-estree 0.6.2 (patch)
+
+#### :bug: Bug Fix
+* `ember-estree`
+  * [#49](https://github.com/NullVoxPopuli/ember-estree/pull/49) perf: drop zimmerframe from outer-AST walk, always use visitorKeys ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+  * [#48](https://github.com/NullVoxPopuli/ember-estree/pull/48) perf: use parser visitorKeys for outer-AST walk in custom-parser path ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
+#### :house: Internal
+* `ember-estree`
+  * [#46](https://github.com/NullVoxPopuli/ember-estree/pull/46) Allow manual bench runs via workflow_dispatch with selectable refs ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
+#### Committers: 1
+- @NullVoxPopuli's reduced-access machine account for AI usage ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
+## Release (2026-04-24)
+
 * ember-estree 0.6.1 (patch)
 
 #### :bug: Bug Fix

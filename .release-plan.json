@@ -2,17 +2,21 @@
   "solution": {
     "ember-estree": {
       "impact": "patch",
-      "oldVersion": "0.6.0",
-      "newVersion": "0.6.1",
+      "oldVersion": "0.6.1",
+      "newVersion": "0.6.2",
       "tagName": "latest",
       "constraints": [
         {
           "impact": "patch",
           "reason": "Appears in changelog section :bug: Bug Fix"
+        },
+        {
+          "impact": "patch",
+          "reason": "Appears in changelog section :house: Internal"
         }
       ],
       "pkgJSONPath": "./package.json"
     }
   },
-  "description": "## Release (2026-04-24)\n\n* ember-estree 0.6.1 (patch)\n\n#### :bug: Bug Fix\n* `ember-estree`\n  * [#44](https://github.com/NullVoxPopuli/ember-estree/pull/44) Splice templates in place when a custom parser is used ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))\n\n#### Committers: 1\n- @NullVoxPopuli's reduced-access machine account for AI usage ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))\n"
+  "description": "## Release (2026-04-24)\n\n* ember-estree 0.6.2 (patch)\n\n#### :bug: Bug Fix\n* `ember-estree`\n  * [#49](https://github.com/NullVoxPopuli/ember-estree/pull/49) perf: drop zimmerframe from outer-AST walk, always use visitorKeys ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))\n  * [#48](https://github.com/NullVoxPopuli/ember-estree/pull/48) perf: use parser visitorKeys for outer-AST walk in custom-parser path ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))\n\n#### :house: Internal\n* `ember-estree`\n  * [#46](https://github.com/NullVoxPopuli/ember-estree/pull/46) Allow manual bench runs via workflow_dispatch with selectable refs ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))\n\n#### Committers: 1\n- @NullVoxPopuli's reduced-access machine account for AI usage ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))\n"
 }
