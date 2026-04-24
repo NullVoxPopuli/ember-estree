@@ -9,11 +9,23 @@
  * 6. Done
  */
 
-import { parseSync } from "oxc-parser";
+import { parseSync, visitorKeys as oxcVisitorKeys } from "oxc-parser";
 import { Preprocessor } from "content-tag";
-import { walk } from "zimmerframe";
 
 import { processTemplate, DocumentLines, glimmerVisitorKeys, setParent } from "./transforms.js";
+
+// Base visitor-keys map for the outer-AST walk: oxc-parser's own keys (covers
+// standard ESTree + TS), plus the `File` wrapper we add on the default path,
+// plus Glimmer's keys. Used to iterate only declared child slots instead of
+// every enumerable property on every node.
+//
+// When `options.parser` returns `visitorKeys`, callers merge on top — but if
+// their parser's AST is oxc-compatible, this base is already sufficient.
+const DEFAULT_VISITOR_KEYS = {
+  ...oxcVisitorKeys,
+  File: ["program"],
+  ...glimmerVisitorKeys,
+};
 
 // Swap `oldNode` for `newNode` in whichever slot of `parent` currently holds it.
 // Used to splice a GlimmerTemplate directly into the outer AST without
@@ -55,7 +67,9 @@ const PLACEHOLDER_TYPES = new Set([
  * @param {string}  [options.filePath] - File path for language detection
  * @param {boolean} [options.tokens] - Generate a flat token stream on the AST (needed by ESLint; skipped by default)
  * @param {boolean} [options.templateOnly] - Parse as raw Glimmer template content (for .hbs)
- * @param {function} [options.parser] - Custom JS/TS parser: (placeholderJS) => { ast, scopeManager?, visitorKeys?, services?, ... }
+ * @param {function} [options.parser] - Custom JS/TS parser: (placeholderJS) => { ast, scopeManager?, visitorKeys?, services?, ... }.
+ *   Recommended to return `visitorKeys` describing the parser's AST; when omitted, oxc-parser's
+ *   keys are used (fine for oxc-compatible ASTs, incomplete for parsers that emit bespoke node types).
  * @param {object|function} [options.visitors] - Either a map of `{ [Type]: (node, path) => void }`
  *   handlers, or a factory `(outerAst) => handlers` invoked once after parsing (before any
  *   template splicing) to give callers a view of the raw JS/TS tree. Handlers fire on every
@@ -206,61 +220,14 @@ export function toTree(source, options = {}) {
     return parseResult;
   }
 
-  // When the custom parser supplies `visitorKeys`, walk the outer AST using
-  // those keys directly — iterating only the properties the parser flagged
-  // as child slots. This is dramatically cheaper than zimmerframe's generic
-  // `for (const key in node)` which iterates every enumerable property (range,
-  // loc, tokens, parent back-links, and other noise) on every node.
-  const parserVisitorKeys = useCustomParser ? result.visitorKeys : null;
-  const allVisitorKeys = parserVisitorKeys ? { ...parserVisitorKeys, ...glimmerVisitorKeys } : null;
-
-  if (allVisitorKeys) {
-    walkWithKeys(result.ast, null);
-  } else {
-    result.ast = walk(result.ast, null, {
-      _(node, { next, visit, state }) {
-        if (hasTemplates && PLACEHOLDER_TYPES.has(node.type)) {
-          const parseResult = matchPlaceholder(node);
-          if (parseResult) {
-            const ast = processPlaceholder(parseResult, node);
-            // Splice in place: write the GlimmerTemplate directly into the
-            // parent's slot instead of returning it from the visitor. Returning
-            // would trigger zimmerframe's apply_mutations, which shallow-clones
-            // every ancestor up to the root — orphaning any WeakMap-keyed data
-            // held by custom parsers (scope manager, esTreeNodeToTSNodeMap).
-            // In-place mutation preserves node identity for all ancestors.
-            const parent = state?.parentPath?.node ?? null;
-            if (parent) replaceInParent(parent, node, ast);
-            setParent(ast, parent);
-            // Dispatch visitors on the Glimmer subtree. We pass `state` so the
-            // Glimmer root's parentPath reflects its true JS parent — the
-            // placeholder (TemplateLiteral / StaticBlock) is an internal
-            // artifact. Not returning anything keeps apply_mutations from
-            // firing up the ancestor chain.
-            if (hasVisitors) visit(ast, state);
-            return;
-          }
-        }
-
-        const path = {
-          node,
-          parent: state?.parentPath?.node ?? null,
-          parentPath: state?.parentPath ?? null,
-        };
-
-        if (hasVisitors && !seen.has(node)) {
-          seen.add(node);
-          const handler = visitors[node.type];
-          if (handler) handler(node, path);
-          if ("blockParams" in node && visitors.GlimmerBlockParams) {
-            visitors.GlimmerBlockParams(node, path);
-          }
-        }
-
-        next({ parentPath: path });
-      },
-    });
-  }
+  // Walk the outer AST keyed on visitorKeys — iterating only declared child
+  // slots instead of every enumerable property on every node. Custom parsers
+  // may supply their own keys; those override the defaults for types they
+  // recognise, and Glimmer keys stay on top for the spliced subtrees.
+  const allVisitorKeys =
+    useCustomParser && result.visitorKeys
+      ? { ...DEFAULT_VISITOR_KEYS, ...result.visitorKeys, ...glimmerVisitorKeys }
+      : DEFAULT_VISITOR_KEYS;
 
   function walkWithKeys(node, parentPath) {
     if (!node || !node.type) return;
@@ -268,10 +235,17 @@ export function toTree(source, options = {}) {
     if (hasTemplates && PLACEHOLDER_TYPES.has(node.type)) {
       const parseResult = matchPlaceholder(node);
       if (parseResult) {
+        // Splice in place: write the GlimmerTemplate directly into the parent's
+        // slot instead of allocating new ancestor objects. This preserves node
+        // identity for every ancestor, which matters for WeakMap-keyed data
+        // held by custom parsers (scope manager, esTreeNodeToTSNodeMap).
         const ast = processPlaceholder(parseResult, node);
         const parent = parentPath?.node ?? null;
         if (parent) replaceInParent(parent, node, ast);
         setParent(ast, parent);
+        // Recurse into the Glimmer subtree so visitors fire on its nodes too.
+        // The Glimmer root's parentPath reflects its true JS parent — the
+        // placeholder (TemplateLiteral / StaticBlock) is an internal artifact.
         if (hasVisitors) walkWithKeys(ast, parentPath);
         return;
       }
@@ -304,6 +278,8 @@ export function toTree(source, options = {}) {
       }
     }
   }
+
+  walkWithKeys(result.ast, null);
 
   // Splice template tokens into the AST token stream.
   //
