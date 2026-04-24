@@ -118,6 +118,20 @@ ${inner}
 ${END_MARKER}`;
 }
 
+function logCounts() {
+  const counts = groups.map((g) => ({
+    title: g.title,
+    count: Object.keys(g.source).filter((k) => g.match(k)).length,
+  }));
+  const total = counts.reduce((sum, c) => sum + c.count, 0);
+  const width = Math.max(...counts.map((c) => c.title.length));
+
+  for (const { title, count } of counts) {
+    console.log(`  ${title.padEnd(width)}  ${count}`);
+  }
+  console.log(`  ${"total".padEnd(width)}  ${total}`);
+}
+
 function updateReadme() {
   const readme = readFileSync(README_PATH, "utf8");
   const section = renderSection();
@@ -140,6 +154,8 @@ function updateReadme() {
     const after = readme.slice(endIdx + END_MARKER.length);
     next = `${before}${section}${after}`;
   }
+
+  logCounts();
 
   if (next === readme) {
     console.log("README already up to date.");
