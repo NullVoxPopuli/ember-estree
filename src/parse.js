@@ -212,9 +212,7 @@ export function toTree(source, options = {}) {
   // `for (const key in node)` which iterates every enumerable property (range,
   // loc, tokens, parent back-links, and other noise) on every node.
   const parserVisitorKeys = useCustomParser ? result.visitorKeys : null;
-  const allVisitorKeys = parserVisitorKeys
-    ? { ...parserVisitorKeys, ...glimmerVisitorKeys }
-    : null;
+  const allVisitorKeys = parserVisitorKeys ? { ...parserVisitorKeys, ...glimmerVisitorKeys } : null;
 
   if (allVisitorKeys) {
     walkWithKeys(result.ast, null);
