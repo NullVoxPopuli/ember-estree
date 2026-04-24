@@ -33,6 +33,7 @@
     "bench": "node --expose-gc tests/parser.bench.mjs",
     "bench:compare": "node scripts/bench-compare.mjs",
     "bench:summary": "./scripts/local-bench-summary.sh",
+    "docs:nodes": "node scripts/generate-ast-node-reference.mjs",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "lint": "oxlint && pnpm format:check && publint",
