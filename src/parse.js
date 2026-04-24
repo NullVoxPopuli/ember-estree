@@ -9,18 +9,20 @@
  * 6. Done
  */
 
-import { parseSync } from "oxc-parser";
+import { parseSync, visitorKeys as oxcVisitorKeys } from "oxc-parser";
 import { Preprocessor } from "content-tag";
-import { visitorKeys as tsVisitorKeys } from "@typescript-eslint/visitor-keys";
 
 import { processTemplate, DocumentLines, glimmerVisitorKeys, setParent } from "./transforms.js";
 
-// Union of @typescript-eslint/visitor-keys (standard ESTree + TS extensions),
-// the `File` wrapper we add on the default oxc path, and Glimmer's own keys.
-// Used as the base map for the outer-AST walk so we iterate only declared
-// child slots instead of every enumerable property on every node.
+// Base visitor-keys map for the outer-AST walk: oxc-parser's own keys (covers
+// standard ESTree + TS), plus the `File` wrapper we add on the default path,
+// plus Glimmer's keys. Used to iterate only declared child slots instead of
+// every enumerable property on every node.
+//
+// When `options.parser` returns `visitorKeys`, callers merge on top — but if
+// their parser's AST is oxc-compatible, this base is already sufficient.
 const DEFAULT_VISITOR_KEYS = {
-  ...tsVisitorKeys,
+  ...oxcVisitorKeys,
   File: ["program"],
   ...glimmerVisitorKeys,
 };
@@ -65,7 +67,9 @@ const PLACEHOLDER_TYPES = new Set([
  * @param {string}  [options.filePath] - File path for language detection
  * @param {boolean} [options.tokens] - Generate a flat token stream on the AST (needed by ESLint; skipped by default)
  * @param {boolean} [options.templateOnly] - Parse as raw Glimmer template content (for .hbs)
- * @param {function} [options.parser] - Custom JS/TS parser: (placeholderJS) => { ast, scopeManager?, visitorKeys?, services?, ... }
+ * @param {function} [options.parser] - Custom JS/TS parser: (placeholderJS) => { ast, scopeManager?, visitorKeys?, services?, ... }.
+ *   Recommended to return `visitorKeys` describing the parser's AST; when omitted, oxc-parser's
+ *   keys are used (fine for oxc-compatible ASTs, incomplete for parsers that emit bespoke node types).
  * @param {object|function} [options.visitors] - Either a map of `{ [Type]: (node, path) => void }`
  *   handlers, or a factory `(outerAst) => handlers` invoked once after parsing (before any
  *   template splicing) to give callers a view of the raw JS/TS tree. Handlers fire on every

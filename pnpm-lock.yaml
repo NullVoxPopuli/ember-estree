@@ -14,9 +14,6 @@ importers:
       '@glimmer/syntax':
         specifier: ^0.95.0
         version: 0.95.0
-      '@typescript-eslint/visitor-keys':
-        specifier: ^8.59.0
-        version: 8.59.0
       content-tag:
         specifier: ^4.1.0
         version: 4.1.0

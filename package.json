@@ -42,7 +42,6 @@
   "dependencies": {
     "@glimmer/env": "^0.1.7",
     "@glimmer/syntax": "^0.95.0",
-    "@typescript-eslint/visitor-keys": "^8.59.0",
     "content-tag": "^4.1.0",
     "oxc-parser": "^0.119.0"
   },
