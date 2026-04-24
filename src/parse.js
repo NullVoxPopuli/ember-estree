@@ -206,49 +206,106 @@ export function toTree(source, options = {}) {
     return parseResult;
   }
 
-  result.ast = walk(result.ast, null, {
-    _(node, { next, visit, state }) {
-      if (hasTemplates && PLACEHOLDER_TYPES.has(node.type)) {
-        const parseResult = matchPlaceholder(node);
-        if (parseResult) {
-          const ast = processPlaceholder(parseResult, node);
-          // Splice in place: write the GlimmerTemplate directly into the
-          // parent's slot instead of returning it from the visitor. Returning
-          // would trigger zimmerframe's apply_mutations, which shallow-clones
-          // every ancestor up to the root — orphaning any WeakMap-keyed data
-          // held by custom parsers (scope manager, esTreeNodeToTSNodeMap).
-          // In-place mutation preserves node identity for all ancestors.
-          const parent = state?.parentPath?.node ?? null;
-          if (parent) replaceInParent(parent, node, ast);
-          setParent(ast, parent);
-          // Dispatch visitors on the Glimmer subtree. We pass `state` so the
-          // Glimmer root's parentPath reflects its true JS parent — the
-          // placeholder (TemplateLiteral / StaticBlock) is an internal
-          // artifact. Not returning anything keeps apply_mutations from
-          // firing up the ancestor chain.
-          if (hasVisitors) visit(ast, state);
-          return;
+  // When the custom parser supplies `visitorKeys`, walk the outer AST using
+  // those keys directly — iterating only the properties the parser flagged
+  // as child slots. This is dramatically cheaper than zimmerframe's generic
+  // `for (const key in node)` which iterates every enumerable property (range,
+  // loc, tokens, parent back-links, and other noise) on every node.
+  const parserVisitorKeys = useCustomParser ? result.visitorKeys : null;
+  const allVisitorKeys = parserVisitorKeys
+    ? { ...parserVisitorKeys, ...glimmerVisitorKeys }
+    : null;
+
+  if (allVisitorKeys) {
+    walkWithKeys(result.ast, null);
+  } else {
+    result.ast = walk(result.ast, null, {
+      _(node, { next, visit, state }) {
+        if (hasTemplates && PLACEHOLDER_TYPES.has(node.type)) {
+          const parseResult = matchPlaceholder(node);
+          if (parseResult) {
+            const ast = processPlaceholder(parseResult, node);
+            // Splice in place: write the GlimmerTemplate directly into the
+            // parent's slot instead of returning it from the visitor. Returning
+            // would trigger zimmerframe's apply_mutations, which shallow-clones
+            // every ancestor up to the root — orphaning any WeakMap-keyed data
+            // held by custom parsers (scope manager, esTreeNodeToTSNodeMap).
+            // In-place mutation preserves node identity for all ancestors.
+            const parent = state?.parentPath?.node ?? null;
+            if (parent) replaceInParent(parent, node, ast);
+            setParent(ast, parent);
+            // Dispatch visitors on the Glimmer subtree. We pass `state` so the
+            // Glimmer root's parentPath reflects its true JS parent — the
+            // placeholder (TemplateLiteral / StaticBlock) is an internal
+            // artifact. Not returning anything keeps apply_mutations from
+            // firing up the ancestor chain.
+            if (hasVisitors) visit(ast, state);
+            return;
+          }
         }
-      }
 
-      const path = {
-        node,
-        parent: state?.parentPath?.node ?? null,
-        parentPath: state?.parentPath ?? null,
-      };
+        const path = {
+          node,
+          parent: state?.parentPath?.node ?? null,
+          parentPath: state?.parentPath ?? null,
+        };
 
-      if (hasVisitors && !seen.has(node)) {
-        seen.add(node);
-        const handler = visitors[node.type];
-        if (handler) handler(node, path);
-        if ("blockParams" in node && visitors.GlimmerBlockParams) {
-          visitors.GlimmerBlockParams(node, path);
+        if (hasVisitors && !seen.has(node)) {
+          seen.add(node);
+          const handler = visitors[node.type];
+          if (handler) handler(node, path);
+          if ("blockParams" in node && visitors.GlimmerBlockParams) {
+            visitors.GlimmerBlockParams(node, path);
+          }
         }
-      }
 
-      next({ parentPath: path });
-    },
-  });
+        next({ parentPath: path });
+      },
+    });
+  }
+
+  function walkWithKeys(node, parentPath) {
+    if (!node || !node.type) return;
+
+    if (hasTemplates && PLACEHOLDER_TYPES.has(node.type)) {
+      const parseResult = matchPlaceholder(node);
+      if (parseResult) {
+        const ast = processPlaceholder(parseResult, node);
+        const parent = parentPath?.node ?? null;
+        if (parent) replaceInParent(parent, node, ast);
+        setParent(ast, parent);
+        if (hasVisitors) walkWithKeys(ast, parentPath);
+        return;
+      }
+    }
+
+    const path = { node, parent: parentPath?.node ?? null, parentPath };
+
+    if (hasVisitors && !seen.has(node)) {
+      seen.add(node);
+      const handler = visitors[node.type];
+      if (handler) handler(node, path);
+      if ("blockParams" in node && visitors.GlimmerBlockParams) {
+        visitors.GlimmerBlockParams(node, path);
+      }
+    }
+
+    const keys = allVisitorKeys[node.type];
+    if (!keys) return;
+    for (const key of keys) {
+      const child = node[key];
+      if (!child) continue;
+      if (Array.isArray(child)) {
+        for (const item of child) {
+          if (item && typeof item === "object" && item.type) {
+            walkWithKeys(item, path);
+          }
+        }
+      } else if (typeof child === "object" && child.type) {
+        walkWithKeys(child, path);
+      }
+    }
+  }
 
   // Splice template tokens into the AST token stream.
   //
