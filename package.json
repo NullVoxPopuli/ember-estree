@@ -54,8 +54,7 @@
     "publint": "^0.3.18",
     "release-plan": "^0.18.0",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4",
-    "zimmerframe": "^1.1.4"
+    "vitest": "^3.2.4"
   },
   "packageManager": "pnpm@10.18.2"
 }

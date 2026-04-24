@@ -48,9 +48,6 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4
-      zimmerframe:
-        specifier: ^1.1.4
-        version: 1.1.4
 
   examples/eslint-parser:
     devDependencies:
@@ -2331,9 +2328,6 @@ packages:
     resolution: {integrity: sha512-CzhO+pFNo8ajLM2d2IW/R93ipy99LWjtwblvC1RsoSUMZgyLbYFr221TnSNT7GjGdYui6P459mw9JH/g/zW2ug==}
     engines: {node: '>=18'}
 
-  zimmerframe@1.1.4:
-    resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
-
   zmod@0.3.1:
     resolution: {integrity: sha512-iki9XG61oZ4436QdMODKrQt2b8vTNMiB3w1pA2KXlpyqAakAH+MusYYhbcFLO70fK4vP2ORKLj7gZexBHfjnNw==}
 
@@ -4406,8 +4400,6 @@ snapshots:
   yocto-queue@0.1.0: {}
 
   yoctocolors@2.1.2: {}
-
-  zimmerframe@1.1.4: {}
 
   zmod@0.3.1:
     dependencies:

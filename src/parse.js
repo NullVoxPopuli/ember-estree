@@ -125,11 +125,6 @@ export function toTree(source, options = {}) {
       ? (options.visitors(result.ast) ?? {})
       : (options.visitors ?? {});
   const hasVisitors = Object.keys(visitors).length > 0;
-  // Guard against dispatching a handler twice on the same node.
-  // Visitors that relocate nodes (e.g. moving Glimmer comments into
-  // `program.comments`) would otherwise fire a second time when the walk
-  // reaches the new location.
-  const seen = new WeakSet();
   const hasTemplates = parseResults.length > 0;
 
   // Nothing to walk — attach visitor keys and return.
@@ -253,8 +248,7 @@ export function toTree(source, options = {}) {
 
     const path = { node, parent: parentPath?.node ?? null, parentPath };
 
-    if (hasVisitors && !seen.has(node)) {
-      seen.add(node);
+    if (hasVisitors) {
       const handler = visitors[node.type];
       if (handler) handler(node, path);
       if ("blockParams" in node && visitors.GlimmerBlockParams) {

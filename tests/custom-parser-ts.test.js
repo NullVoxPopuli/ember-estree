@@ -89,9 +89,9 @@ describe("toTree — custom parser (typescript-eslint) — scope manager", () =>
     expect(scopeManager).toBeDefined();
 
     // ESLint's context.getScope() ultimately calls scopeManager.acquire(node).
-    // If zimmerframe cloned a function/arrow node, the original scope.block
-    // is still the old node, and acquire(scope.block) may return null or the
-    // wrong scope. Every scope should round-trip.
+    // If a function/arrow node got cloned during splicing, the original
+    // scope.block would still be the old node, and acquire(scope.block) may
+    // return null or the wrong scope. Every scope should round-trip.
     for (const scope of scopeManager.scopes) {
       if (!scope.block) continue;
       const looked = scopeManager.acquire(scope.block);
