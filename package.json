@@ -42,9 +42,9 @@
   "dependencies": {
     "@glimmer/env": "^0.1.7",
     "@glimmer/syntax": "^0.95.0",
+    "@typescript-eslint/visitor-keys": "^8.59.0",
     "content-tag": "^4.1.0",
-    "oxc-parser": "^0.119.0",
-    "zimmerframe": "^1.1.4"
+    "oxc-parser": "^0.119.0"
   },
   "devDependencies": {
     "@tsconfig/node-lts": "^22.0.2",
@@ -55,7 +55,8 @@
     "publint": "^0.3.18",
     "release-plan": "^0.18.0",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "zimmerframe": "^1.1.4"
   },
   "packageManager": "pnpm@10.18.2"
 }
