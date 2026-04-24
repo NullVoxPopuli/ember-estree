@@ -64,7 +64,7 @@ export const glimmerVisitorKeys = (() => {
 //   Block: blockParams
 const _desc = { value: undefined, configurable: true, enumerable: true, writable: true };
 const _parentDesc = { value: null, configurable: true, enumerable: false, writable: true };
-function setParent(node, parent) {
+export function setParent(node, parent) {
   _parentDesc.value = parent;
   Object.defineProperty(node, "parent", _parentDesc);
 }
