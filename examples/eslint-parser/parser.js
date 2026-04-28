@@ -4,8 +4,10 @@
  * @see https://eslint.org/docs/latest/extend/custom-parsers
  */
 import { toTree, glimmerVisitorKeys, DocumentLines } from "ember-estree";
-import { analyze, Reference, Scope, Variable, Definition } from "eslint-scope";
-import { isKeyword } from "@glimmer/syntax";
+import { analyze } from "eslint-scope";
+import { registerGlimmerScopes } from "ember-estree/eslint-scope";
+
+const EXCLUDED_KEYS = ["parent", "loc", "range", "tokens", "comments"];
 
 /**
  * Add `range` and `loc` to every AST node. ESLint requires both.
@@ -33,124 +35,6 @@ function addRangesAndLocs(node, docLines, visited = new Set()) {
       addRangesAndLocs(val, docLines, visited);
     }
   }
-}
-
-// ── Scope helpers ──
-
-function findVarInParentScopes(scopeManager, path, name) {
-  let defScope = null;
-  let currentScope = null;
-  let p = path;
-  while (p) {
-    const s = scopeManager.acquire(p.node, true);
-    if (s) {
-      if (!currentScope) currentScope = s;
-      if (s.set.has(name)) {
-        defScope = s;
-        break;
-      }
-    }
-    p = p.parentPath;
-  }
-  if (!defScope) return { scope: currentScope };
-  return { scope: currentScope, variable: defScope.set.get(name) };
-}
-
-function findParentScope(scopeManager, path) {
-  let p = path;
-  while (p) {
-    const scope = scopeManager.acquire(p.node, true);
-    if (scope) return scope;
-    p = p.parentPath;
-  }
-  return null;
-}
-
-function registerNodeInScope(node, scope, variable) {
-  const ref = new Reference(node, scope, Reference.READ);
-  if (variable) {
-    variable.references.push(ref);
-    ref.resolved = variable;
-  } else {
-    let s = scope;
-    while (s.upper) s = s.upper;
-    s.through.push(ref);
-  }
-  scope.references.push(ref);
-}
-
-const EXCLUDED_KEYS = ["parent", "loc", "range", "tokens", "comments"];
-
-function traverseAST(visitorKeys, node, visitor) {
-  const queue = [{ node, parent: null, parentKey: null, parentPath: null }];
-  while (queue.length > 0) {
-    const currentPath = queue.pop();
-    visitor(currentPath);
-    if (!currentPath.node?.type) continue;
-    let keys = visitorKeys[currentPath.node.type];
-    if (!keys) keys = Object.keys(currentPath.node).filter((k) => !EXCLUDED_KEYS.includes(k));
-    for (const key of keys) {
-      const child = currentPath.node[key];
-      if (!child) continue;
-      if (Array.isArray(child)) {
-        for (const item of child) {
-          if (item?.type)
-            queue.push({
-              node: item,
-              parent: currentPath.node,
-              parentKey: key,
-              parentPath: currentPath,
-            });
-        }
-      } else if (child.type) {
-        queue.push({
-          node: child,
-          parent: currentPath.node,
-          parentKey: key,
-          parentPath: currentPath,
-        });
-      }
-    }
-  }
-}
-
-function registerGlimmerScopes(program, scopeManager, visitorKeys) {
-  traverseAST(visitorKeys, program, (path) => {
-    const node = path.node;
-    if (!node) return;
-
-    if (node.type === "GlimmerPathExpression" && node.head?.type === "VarHead") {
-      if (isKeyword(node.head.name)) return;
-      const { scope, variable } = findVarInParentScopes(scopeManager, path, node.head.name);
-      if (scope) {
-        node.head.parent = node;
-        registerNodeInScope(node.head, scope, variable);
-      }
-    }
-
-    if (node.type === "GlimmerElementNode" && node.parts?.[0]) {
-      const name = node.parts[0].name;
-      const ignore =
-        name === "this" || name.startsWith(":") || name.startsWith("@") || name.includes("-");
-      if (!ignore && /^[A-Z]/.test(name)) {
-        const { scope, variable } = findVarInParentScopes(scopeManager, path, name);
-        if (scope) registerNodeInScope(node.parts[0], scope, variable);
-      }
-    }
-
-    if (node.blockParamNodes?.length > 0) {
-      const upperScope = findParentScope(scopeManager, path);
-      if (!upperScope) return;
-      const scope = new Scope(scopeManager, "block", upperScope, node, false);
-      for (const [i, param] of node.blockParamNodes.entries()) {
-        const v = new Variable(param.name, scope);
-        v.identifiers.push(param);
-        scope.variables.push(v);
-        scope.set.set(param.name, v);
-        v.defs.push(new Definition("Parameter", param, node, node, i, "Block Param"));
-      }
-    }
-  });
 }
 
 /**
@@ -186,7 +70,7 @@ export function parseForESLint(code, options = {}) {
     fallback: (node) => Object.keys(node).filter((k) => !EXCLUDED_KEYS.includes(k)),
   });
 
-  registerGlimmerScopes(program, scopeManager, visitorKeys);
+  registerGlimmerScopes(scopeManager);
 
   return { ast: program, visitorKeys, scopeManager };
 }
