@@ -447,6 +447,68 @@ describe("token stream", () => {
         ]
       `);
     });
+
+    it("attribute- and body-position comments share the source order in the token stream", () => {
+      // Regression: AST-traversal order doesn't match source order for an
+      // element carrying both kinds of MustacheCommentStatement. With the
+      // earlier (unsorted) `comments` list, the body-position `{{! b }}` —
+      // visited first by the Glimmer walk — moved ahead of the attribute-
+      // position `{{! a }}` in `comments`, the linear-merge skip pass missed
+      // the attr-position interval, and the same span ended up tokenized
+      // twice (raw `{`, `{`, `!`, …, `}` punctuators *and* a Block). ESLint
+      // rules walking the resulting non-monotonic token stream infinite-
+      // looped on a 7-line `.gts` repro.
+      const source = "<li {{! a }}>{{! b }}</li>";
+      const result = toTree(source, { templateOnly: true, tokens: true });
+      const toks = (result.ast || result).tokens;
+
+      // Source order, with each comment showing up exactly once and no raw
+      // `{`/`!`/`}` punctuators leaking through inside a comment range.
+      expect(toks.map((t) => ({ type: t.type, value: t.value }))).toMatchInlineSnapshot(`
+        [
+          {
+            "type": "Punctuator",
+            "value": "<",
+          },
+          {
+            "type": "word",
+            "value": "li",
+          },
+          {
+            "type": "Block",
+            "value": "{! a }}",
+          },
+          {
+            "type": "Punctuator",
+            "value": ">",
+          },
+          {
+            "type": "Block",
+            "value": "{! b }}",
+          },
+          {
+            "type": "Punctuator",
+            "value": "<",
+          },
+          {
+            "type": "Punctuator",
+            "value": "/",
+          },
+          {
+            "type": "word",
+            "value": "li",
+          },
+          {
+            "type": "Punctuator",
+            "value": ">",
+          },
+        ]
+      `);
+
+      for (let i = 1; i < toks.length; i++) {
+        expect(toks[i].range[0]).toBeGreaterThanOrEqual(toks[i - 1].range[0]);
+      }
+    });
   });
 
   describe("ordering and ranges", () => {

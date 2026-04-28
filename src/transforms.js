@@ -256,6 +256,15 @@ export function processTemplate(templateContent, codeLines, options = {}) {
   removeFromParent(emptyTextNodes);
 
   if (generateTokens) {
+    // buildTokenStream walks comments and textNodes as sorted intervals via
+    // pointer advancement. AST-traversal order doesn't match source order
+    // when an element has both attribute-position and body-position
+    // MustacheCommentStatements (e.g. `<li {{! a }}>{{! b }}</li>`), so
+    // sort here. Without the sort, raw tokens that fall inside an earlier-
+    // source-position comment fail the skip check, the same span ends up
+    // tokenized twice (raw punctuators *and* a Block), and downstream
+    // ESLint token walks can infinite-loop on the non-monotonic stream.
+    comments.sort((a, b) => a.range[0] - b.range[0]);
     ast.tokens = buildTokenStream(
       tokenize(templateContent, codeLines, offset),
       comments,
