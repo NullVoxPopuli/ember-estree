@@ -1,20 +1,25 @@
 import { expect, it } from "vitest";
 
-import { parse } from 'ember-estree';
-import { stripKeys, keyOrderSerializer } from './post-process.js';
+import { parse } from "ember-estree";
+import { stripKeys, keyOrderSerializer } from "./post-process.js";
 
 expect.addSnapshotSerializer(keyOrderSerializer);
 
 function min(ast) {
-  return stripKeys(ast,
-    ['start', 'end', 'loc', 'range', 'visitorKeys', 'definite', 'declare', 'data'],
-  );
+  return stripKeys(ast, [
+    "start",
+    "end",
+    "loc",
+    "range",
+    "visitorKeys",
+    "definite",
+    "declare",
+    "data",
+  ]);
 }
 
-it('const declaration', () => {
-  let ast = parse(
-    `const x = <template>hi</template>;`
-  );
+it("const declaration", () => {
+  let ast = parse(`const x = <template>hi</template>;`);
 
   expect(min(ast.program.body)).toMatchInlineSnapshot(`
     [
@@ -48,16 +53,16 @@ it('const declaration', () => {
         ],
       },
     ]
-  `)
+  `);
 });
 
-it('class', () => {
+it("class", () => {
   let ast = parse(
     `class X {
   <template>
     hello there
   </template>
-}`
+}`,
   );
 
   expect(min(ast.program.body)).toMatchInlineSnapshot(`
@@ -103,18 +108,17 @@ it('class', () => {
         "abstract": false,
       },
     ]
-  `)
+  `);
 });
 
-
-it('gives a merged AST', () => {
+it("gives a merged AST", () => {
   let ast = parse(
     `const x = <template>hi</template>;
 
 <template>
   <x />
 </template>
-`
+`,
   );
 
   expect(min(ast.program.body)).toMatchInlineSnapshot(`
