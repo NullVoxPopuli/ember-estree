@@ -38,8 +38,8 @@ jobs:
           # For workflow_dispatch: use the user-selected experiment ref.
           ref: ${{ github.event.inputs.experiment_ref || github.event.pull_request.head.sha }}
 
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
         with:
           node-version-file: package.json
           cache: pnpm
