@@ -6,13 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       experiment_ref:
-        description: "Experiment ref to benchmark (branch, tag, or commit SHA)"
+        description: 'Experiment ref to benchmark (branch, tag, or commit SHA)'
         required: true
         type: string
       base_ref:
-        description: "Control ref to compare against (branch, tag, or commit SHA)"
+        description: 'Control ref to compare against (branch, tag, or commit SHA)'
         required: false
-        default: "main"
+        default: 'main'
         type: string
 
 concurrency:
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   bench-compare:
-    name: "Benchmark Comparison"
+    name: 'Benchmark Comparison'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -38,8 +38,8 @@ jobs:
           # For workflow_dispatch: use the user-selected experiment ref.
           ref: ${{ github.event.inputs.experiment_ref || github.event.pull_request.head.sha }}
 
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
         with:
           node-version-file: package.json
           cache: pnpm

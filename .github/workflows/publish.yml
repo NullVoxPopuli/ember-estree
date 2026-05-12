@@ -10,7 +10,7 @@ on:
       - main
       - master
     paths:
-      - ".release-plan.json"
+      - '.release-plan.json'
 
 concurrency:
   group: publish-${{ github.head_ref || github.ref }}
@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   publish:
-    name: "NPM Publish"
+    name: 'NPM Publish'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -27,11 +27,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          registry-url: "https://registry.npmjs.org"
+          registry-url: 'https://registry.npmjs.org'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Publish to NPM
