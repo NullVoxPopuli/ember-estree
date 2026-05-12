@@ -1,5 +1,16 @@
 # Changelog
 
+## Release (2026-05-12)
+
+* ember-estree 0.6.4 (patch)
+
+#### :bug: Bug Fix
+* `ember-estree`
+  * [#55](https://github.com/NullVoxPopuli/ember-estree/pull/55) Bump dependencies ([@evoactivity](https://github.com/evoactivity))
+
+#### Committers: 1
+- Liam ([@evoactivity](https://github.com/evoactivity))
+
 ## Release (2026-04-28)
 
 * ember-estree 0.6.3 (patch)
