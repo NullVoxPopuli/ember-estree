@@ -42,6 +42,21 @@ describe("parse + print (.gjs)", () => {
     expect(printed).toContain("<br />");
   });
 
+  it("round-trips block params on a block statement", () => {
+    const source = `const A = <template>{{#each this.items as |item index|}}{{item}}{{index}}{{/each}}</template>;`;
+    expect(print(parse(source).program)).toBe(source);
+  });
+
+  it("round-trips block params on an element", () => {
+    const source = `const A = <template><Foo as |bar baz|>{{bar}}</Foo></template>;`;
+    expect(print(parse(source).program)).toBe(source);
+  });
+
+  it("round-trips a parenthesized JS expression", () => {
+    const source = `const x = (a + b) * c;`;
+    expect(print(parse(source).program)).toBe(source);
+  });
+
   it("handles multiple templates in a single gjs file", () => {
     const source = `
 const A = <template><h1>A</h1></template>;

@@ -83,6 +83,9 @@ export function print(node) {
     case "ChainExpression":
       return print(node.expression);
 
+    case "ParenthesizedExpression":
+      return `(${print(node.expression)})`;
+
     case "ArrowFunctionExpression": {
       const typeParams = node.typeParameters ? print(node.typeParameters) : "";
       const params = (node.params ?? []).map(print).join(", ");
@@ -772,11 +775,13 @@ export function print(node) {
       const attrs = (node.attributes ?? []).map(print).join(" ");
       const modifiers = (node.modifiers ?? []).map(print).join(" ");
       const children = (node.children ?? []).map(print).join("");
+      const blockParams = node.blockParams ?? [];
+      const asParams = blockParams.length ? ` as |${blockParams.join(" ")}|` : "";
       const parts = [tag];
       if (attrs) parts.push(attrs);
       if (modifiers) parts.push(modifiers);
       if (node.selfClosing) return `<${parts.join(" ")} />`;
-      return `<${parts.join(" ")}>${children}</${tag}>`;
+      return `<${parts.join(" ")}${asParams}>${children}</${tag}>`;
     }
 
     case "GlimmerElementNodePart":
@@ -799,6 +804,8 @@ export function print(node) {
       const path = print(node.path);
       const params = (node.params ?? []).map(print).join(" ");
       const hash = node.hash ? print(node.hash) : "";
+      const blockParams = node.program?.blockParams ?? [];
+      const asParams = blockParams.length ? ` as |${blockParams.join(" ")}|` : "";
       const body = (node.body ?? node.program?.body ?? []).map(print).join("");
       const inverse = node.inverse
         ? `{{else}}${(node.inverse.body ?? []).map(print).join("")}`
@@ -806,7 +813,7 @@ export function print(node) {
       const parts = [path];
       if (params) parts.push(params);
       if (hash) parts.push(hash);
-      return `{{#${parts.join(" ")}}}${body}${inverse}{{/${print(node.path)}}}`;
+      return `{{#${parts.join(" ")}${asParams}}}${body}${inverse}{{/${print(node.path)}}}`;
     }
 
     case "GlimmerPathExpression":
