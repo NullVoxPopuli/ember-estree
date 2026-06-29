@@ -3,6 +3,11 @@ import { parse, print } from "../src/index.js";
 import { findNode } from "./helpers.js";
 
 describe("parse + print (.gts)", () => {
+  it("round-trips a parenthesized type", () => {
+    const source = `type X = (A | B)[];`;
+    expect(print(parse(source, { filePath: "x.gts" }).program)).toBe(source);
+  });
+
   it("round-trips type-only imports and exports", () => {
     const sources = [
       `import type { Foo } from 'bar';`,
