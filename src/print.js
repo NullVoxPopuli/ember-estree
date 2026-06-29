@@ -831,8 +831,19 @@ export function print(node) {
 
     case "GlimmerAttrNode": {
       const name = node.name ?? "";
-      const value = print(node.value);
-      return `${name}=${value}`;
+      const value = node.value;
+      // A plain text value carries no quote style in the AST, so quote it
+      // (always valid) — printing it raw drops the quotes and corrupts any
+      // value with whitespace, e.g. `data-x="a b"` -> `data-x=a b`. An empty
+      // text value is a valueless attribute (`<input disabled>`).
+      if (value?.type === "GlimmerTextNode") {
+        const chars = value.chars ?? "";
+        if (chars === "") return name;
+        const quote = chars.includes('"') ? "'" : '"';
+        return `${name}=${quote}${chars}${quote}`;
+      }
+      // Mustache (`{{x}}`) and concat (`"a {{b}}"`) values print themselves.
+      return `${name}=${print(value)}`;
     }
 
     case "GlimmerConcatStatement": {

@@ -50,7 +50,7 @@ describe("print", () => {
       children: [],
       selfClosing: false,
     };
-    expect(print(node)).toBe("<div class=main></div>");
+    expect(print(node)).toBe('<div class="main"></div>');
   });
 
   it("prints GlimmerTextNode", () => {
@@ -156,7 +156,34 @@ describe("print", () => {
       name: "class",
       value: { type: "GlimmerTextNode", chars: "main" },
     };
-    expect(print(node)).toBe("class=main");
+    expect(print(node)).toBe('class="main"');
+  });
+
+  it("prints GlimmerAttrNode with whitespace in the value", () => {
+    const node = {
+      type: "GlimmerAttrNode",
+      name: "data-x",
+      value: { type: "GlimmerTextNode", chars: "hello world" },
+    };
+    expect(print(node)).toBe('data-x="hello world"');
+  });
+
+  it("prints a valueless GlimmerAttrNode", () => {
+    const node = {
+      type: "GlimmerAttrNode",
+      name: "disabled",
+      value: { type: "GlimmerTextNode", chars: "" },
+    };
+    expect(print(node)).toBe("disabled");
+  });
+
+  it("single-quotes a GlimmerAttrNode value containing a double quote", () => {
+    const node = {
+      type: "GlimmerAttrNode",
+      name: "title",
+      value: { type: "GlimmerTextNode", chars: 'he said "hi"' },
+    };
+    expect(print(node)).toBe("title='he said \"hi\"'");
   });
 
   it("prints GlimmerConcatStatement", () => {

@@ -57,6 +57,11 @@ describe("parse + print (.gjs)", () => {
     expect(print(parse(source).program)).toBe(source);
   });
 
+  it("round-trips quoted attribute values", () => {
+    const source = `const A = <template><div class="main" data-x="hello world"></div></template>;`;
+    expect(print(parse(source).program)).toBe(source);
+  });
+
   it("handles multiple templates in a single gjs file", () => {
     const source = `
 const A = <template><h1>A</h1></template>;
