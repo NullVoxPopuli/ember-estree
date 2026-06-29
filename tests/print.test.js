@@ -451,6 +451,51 @@ describe("print", () => {
     expect(print(node)).toBe("(string | number)");
   });
 
+  it("prints JSDoc type nodes", () => {
+    const str = { type: "TSStringKeyword" };
+    expect(print({ type: "TSJSDocNullableType", typeAnnotation: str })).toBe("?string");
+    expect(print({ type: "TSJSDocNullableType", typeAnnotation: str, postfix: true })).toBe(
+      "string?",
+    );
+    expect(print({ type: "TSJSDocNonNullableType", typeAnnotation: str })).toBe("!string");
+    expect(print({ type: "TSJSDocUnknownType" })).toBe("?");
+  });
+
+  it("prints V8IntrinsicExpression", () => {
+    const node = {
+      type: "V8IntrinsicExpression",
+      name: "DebugPrint",
+      arguments: [{ type: "Identifier", name: "x" }],
+    };
+    expect(print(node)).toBe("%DebugPrint(x)");
+  });
+
+  it("prints TSEnumBody", () => {
+    const node = {
+      type: "TSEnumBody",
+      members: [
+        { type: "TSEnumMember", id: { type: "Identifier", name: "A" } },
+        { type: "TSEnumMember", id: { type: "Identifier", name: "B" } },
+      ],
+    };
+    expect(print(node)).toBe("{\nA,\nB\n}");
+  });
+
+  it("prints TSEnumDeclaration with a TSEnumBody (newer oxc shape)", () => {
+    const node = {
+      type: "TSEnumDeclaration",
+      id: { type: "Identifier", name: "Color" },
+      body: {
+        type: "TSEnumBody",
+        members: [
+          { type: "TSEnumMember", id: { type: "Identifier", name: "Red" } },
+          { type: "TSEnumMember", id: { type: "Identifier", name: "Green" } },
+        ],
+      },
+    };
+    expect(print(node)).toBe("enum Color {\nRed,\nGreen\n}");
+  });
+
   it("prints TSTupleType", () => {
     const node = {
       type: "TSTupleType",

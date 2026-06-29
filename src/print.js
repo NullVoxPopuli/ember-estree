@@ -83,6 +83,12 @@ export function print(node) {
     case "ChainExpression":
       return print(node.expression);
 
+    case "V8IntrinsicExpression": {
+      const name = typeof node.name === "string" ? node.name : print(node.name);
+      const args = (node.arguments ?? []).map(print).join(", ");
+      return `%${name}(${args})`;
+    }
+
     case "ParenthesizedExpression":
       return `(${print(node.expression)})`;
 
@@ -544,6 +550,16 @@ export function print(node) {
     case "TSParenthesizedType":
       return `(${print(node.typeAnnotation)})`;
 
+    // JSDoc type syntax (`?Foo`, `!Foo`, `?`) — `postfix` flips prefix/suffix.
+    case "TSJSDocNullableType":
+      return node.postfix ? `${print(node.typeAnnotation)}?` : `?${print(node.typeAnnotation)}`;
+
+    case "TSJSDocNonNullableType":
+      return node.postfix ? `${print(node.typeAnnotation)}!` : `!${print(node.typeAnnotation)}`;
+
+    case "TSJSDocUnknownType":
+      return "?";
+
     case "TSTupleType": {
       const elems = (node.elementTypes ?? []).map(print).join(", ");
       return `[${elems}]`;
@@ -683,8 +699,15 @@ export function print(node) {
       const declare = node.declare ? "declare " : "";
       const constKw = node.const ? "const " : "";
       const id = print(node.id);
-      const members = (node.members ?? []).map(print).join(",\n");
+      // Newer oxc nests members in a TSEnumBody child; older versions put
+      // `members` directly on the declaration.
+      const members = (node.body?.members ?? node.members ?? []).map(print).join(",\n");
       return `${declare}${constKw}enum ${id} {\n${members}\n}`;
+    }
+
+    case "TSEnumBody": {
+      const members = (node.members ?? []).map(print).join(",\n");
+      return `{\n${members}\n}`;
     }
 
     case "TSEnumMember": {
