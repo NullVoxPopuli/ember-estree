@@ -373,6 +373,8 @@ export function print(node) {
       const attrs = (node.attributes ?? []).map(print);
       const attrStr = attrs.length ? ` with { ${attrs.join(", ")} }` : "";
       if (specs.length === 0) return `import ${source}${attrStr};`;
+      // `import type { ... }` — a type-only import declaration.
+      const typeKind = node.importKind === "type" ? "type " : "";
       const defaultSpec = specs.find(
         (_, i) => node.specifiers[i].type === "ImportDefaultSpecifier",
       );
@@ -382,7 +384,7 @@ export function print(node) {
       if (defaultSpec) parts.push(defaultSpec);
       if (nsSpec) parts.push(print(nsSpec));
       if (namedSpecs.length) parts.push(`{ ${namedSpecs.join(", ")} }`);
-      return `import ${parts.join(", ")} from ${source}${attrStr};`;
+      return `import ${typeKind}${parts.join(", ")} from ${source}${attrStr};`;
     }
 
     case "ImportDefaultSpecifier":
@@ -391,7 +393,9 @@ export function print(node) {
     case "ImportSpecifier": {
       const imported = print(node.imported);
       const local = print(node.local);
-      return imported === local ? imported : `${imported} as ${local}`;
+      const spec = imported === local ? imported : `${imported} as ${local}`;
+      // Inline `import { type Foo }` modifier.
+      return node.importKind === "type" ? `type ${spec}` : spec;
     }
 
     case "ImportNamespaceSpecifier":
@@ -408,19 +412,24 @@ export function print(node) {
       if (node.specifiers?.length) {
         const specs = node.specifiers.map(print).join(", ");
         const from = node.source ? ` from ${print(node.source)}` : "";
-        return `export { ${specs} }${from};`;
+        // `export type { ... }` — a type-only export declaration.
+        const typeKind = node.exportKind === "type" ? "type " : "";
+        return `export ${typeKind}{ ${specs} }${from};`;
       }
       return "";
 
     case "ExportAllDeclaration": {
       const exported = node.exported ? ` as ${print(node.exported)}` : "";
-      return `export *${exported} from ${print(node.source)};`;
+      const typeKind = node.exportKind === "type" ? "type " : "";
+      return `export ${typeKind}*${exported} from ${print(node.source)};`;
     }
 
     case "ExportSpecifier": {
       const local = print(node.local);
       const exported = print(node.exported);
-      return local === exported ? local : `${local} as ${exported}`;
+      const spec = local === exported ? local : `${local} as ${exported}`;
+      // Inline `export { type Foo }` modifier.
+      return node.exportKind === "type" ? `type ${spec}` : spec;
     }
 
     // ── JSX (unsupported — Ember uses Glimmer templates) ─────────

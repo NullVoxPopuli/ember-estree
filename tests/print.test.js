@@ -285,6 +285,58 @@ describe("print", () => {
     expect(print(node)).toBe("import Component from '@glimmer/component';");
   });
 
+  it("prints a type-only ImportDeclaration", () => {
+    const node = {
+      type: "ImportDeclaration",
+      importKind: "type",
+      specifiers: [
+        {
+          type: "ImportSpecifier",
+          imported: { type: "Identifier", name: "Foo" },
+          local: { type: "Identifier", name: "Foo" },
+        },
+      ],
+      source: { type: "Literal", value: "bar", raw: "'bar'" },
+    };
+    expect(print(node)).toBe("import type { Foo } from 'bar';");
+  });
+
+  it("prints an inline type ImportSpecifier", () => {
+    const node = {
+      type: "ImportSpecifier",
+      importKind: "type",
+      imported: { type: "Identifier", name: "Foo" },
+      local: { type: "Identifier", name: "Foo" },
+    };
+    expect(print(node)).toBe("type Foo");
+  });
+
+  it("prints a type-only ExportNamedDeclaration", () => {
+    const node = {
+      type: "ExportNamedDeclaration",
+      exportKind: "type",
+      specifiers: [
+        {
+          type: "ExportSpecifier",
+          local: { type: "Identifier", name: "Foo" },
+          exported: { type: "Identifier", name: "Foo" },
+        },
+      ],
+      source: { type: "Literal", value: "bar", raw: "'bar'" },
+    };
+    expect(print(node)).toBe("export type { Foo } from 'bar';");
+  });
+
+  it("prints an inline type ExportSpecifier", () => {
+    const node = {
+      type: "ExportSpecifier",
+      exportKind: "type",
+      local: { type: "Identifier", name: "Foo" },
+      exported: { type: "Identifier", name: "Foo" },
+    };
+    expect(print(node)).toBe("type Foo");
+  });
+
   it("prints VariableDeclaration", () => {
     const node = {
       type: "VariableDeclaration",

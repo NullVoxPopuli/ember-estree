@@ -3,6 +3,20 @@ import { parse, print } from "../src/index.js";
 import { findNode } from "./helpers.js";
 
 describe("parse + print (.gts)", () => {
+  it("round-trips type-only imports and exports", () => {
+    const sources = [
+      `import type { Foo } from 'bar';`,
+      `import { type Foo, Bar } from 'bar';`,
+      `import type Foo from 'bar';`,
+      `import type * as NS from 'bar';`,
+      `export type { Foo } from 'bar';`,
+      `export { type Foo, Bar } from 'bar';`,
+    ];
+    for (const source of sources) {
+      expect(print(parse(source, { filePath: "x.gts" }).program)).toBe(source);
+    }
+  });
+
   it("parses a gts-style file with a class component", () => {
     const source = `
 import Component from '@glimmer/component';
