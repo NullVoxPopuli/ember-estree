@@ -89,6 +89,41 @@ describe("print", () => {
     expect(print(node)).toBe("{{#each @items}}item{{/each}}");
   });
 
+  it("prints GlimmerBlockStatement with block params", () => {
+    const node = {
+      type: "GlimmerBlockStatement",
+      path: { type: "GlimmerPathExpression", original: "each" },
+      params: [{ type: "GlimmerPathExpression", original: "@items" }],
+      hash: null,
+      program: {
+        blockParams: ["item", "index"],
+        body: [
+          {
+            type: "GlimmerMustacheStatement",
+            path: { type: "GlimmerPathExpression", original: "item" },
+            params: [],
+            hash: null,
+          },
+        ],
+      },
+      inverse: null,
+    };
+    expect(print(node)).toBe("{{#each @items as |item index|}}{{item}}{{/each}}");
+  });
+
+  it("prints GlimmerElementNode with block params", () => {
+    const node = {
+      type: "GlimmerElementNode",
+      tag: "Foo",
+      attributes: [],
+      modifiers: [],
+      children: [{ type: "GlimmerTextNode", chars: "hi" }],
+      blockParams: ["bar", "baz"],
+      selfClosing: false,
+    };
+    expect(print(node)).toBe("<Foo as |bar baz|>hi</Foo>");
+  });
+
   it("prints GlimmerBlockStatement with inverse", () => {
     const node = {
       type: "GlimmerBlockStatement",
@@ -380,6 +415,19 @@ describe("print", () => {
       expression: { type: "Identifier", name: "x" },
     };
     expect(print(node)).toBe("x!");
+  });
+
+  it("prints ParenthesizedExpression", () => {
+    const node = {
+      type: "ParenthesizedExpression",
+      expression: {
+        type: "BinaryExpression",
+        operator: "+",
+        left: { type: "Identifier", name: "a" },
+        right: { type: "Identifier", name: "b" },
+      },
+    };
+    expect(print(node)).toBe("(a + b)");
   });
 
   it("prints TSEnumDeclaration", () => {
