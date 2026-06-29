@@ -541,6 +541,9 @@ export function print(node) {
     case "TSArrayType":
       return `${print(node.elementType)}[]`;
 
+    case "TSParenthesizedType":
+      return `(${print(node.typeAnnotation)})`;
+
     case "TSTupleType": {
       const elems = (node.elementTypes ?? []).map(print).join(", ");
       return `[${elems}]`;

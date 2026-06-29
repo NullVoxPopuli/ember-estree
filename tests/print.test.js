@@ -440,6 +440,17 @@ describe("print", () => {
     expect(print(node)).toBe("string[]");
   });
 
+  it("prints TSParenthesizedType", () => {
+    const node = {
+      type: "TSParenthesizedType",
+      typeAnnotation: {
+        type: "TSUnionType",
+        types: [{ type: "TSStringKeyword" }, { type: "TSNumberKeyword" }],
+      },
+    };
+    expect(print(node)).toBe("(string | number)");
+  });
+
   it("prints TSTupleType", () => {
     const node = {
       type: "TSTupleType",
