@@ -164,9 +164,25 @@ const Badge = <template><span>hi</span></template>;
       ],
     };
     const printed = print(enumNode);
-    expect(printed).toContain("enum Color");
-    expect(printed).toContain("Red");
-    expect(printed).toContain("Blue = 1");
+    expect(printed).toMatchInlineSnapshot(`
+      "enum Color {
+      Red,
+      Blue = 1
+      }"
+    `);
+  });
+
+  it("preserves enum members through parse + print", () => {
+    // Newer oxc nests members under a TSEnumBody; the printed enum must
+    // still contain them rather than collapsing to an empty body.
+    const printed = print(parse(`enum Color { Red, Green, Blue }`, { filePath: "x.gts" }).program);
+    expect(printed).toMatchInlineSnapshot(`
+      "enum Color {
+      Red,
+      Green,
+      Blue
+      }"
+    `);
   });
 
   it("handles filePath with gts extension", () => {
