@@ -209,7 +209,7 @@ export function print(node) {
     case "BlockStatement":
     case "StaticBlock": {
       const body = (node.body ?? []).map(print).join("\n");
-      return `{\n${body}\n}`;
+      return braceBlock(body);
     }
 
     case "EmptyStatement":
@@ -250,13 +250,13 @@ export function print(node) {
     case "SwitchStatement": {
       const disc = print(node.discriminant);
       const cases = (node.cases ?? []).map(print).join("\n");
-      return `switch (${disc}) {\n${cases}\n}`;
+      return `switch (${disc}) ${braceBlock(cases)}`;
     }
 
     case "SwitchCase": {
       const test = node.test ? `case ${print(node.test)}:` : "default:";
       const body = (node.consequent ?? []).map(print).join("\n");
-      return `${test}\n${body}`;
+      return body ? `${test}\n${indent(body)}` : test;
     }
 
     case "ThrowStatement":
@@ -330,7 +330,7 @@ export function print(node) {
 
     case "ClassBody": {
       const body = (node.body ?? []).map(print).join("\n");
-      return `{\n${body}\n}`;
+      return braceBlock(body);
     }
 
     case "MethodDefinition":
@@ -678,7 +678,7 @@ export function print(node) {
 
     case "TSInterfaceBody": {
       const body = (node.body ?? []).map(print).join("\n");
-      return `{\n${body}\n}`;
+      return braceBlock(body);
     }
 
     case "TSInterfaceHeritage":
@@ -702,12 +702,12 @@ export function print(node) {
       // Newer oxc nests members in a TSEnumBody child; older versions put
       // `members` directly on the declaration.
       const members = (node.body?.members ?? node.members ?? []).map(print).join(",\n");
-      return `${declare}${constKw}enum ${id} {\n${members}\n}`;
+      return `${declare}${constKw}enum ${id} ${braceBlock(members)}`;
     }
 
     case "TSEnumBody": {
       const members = (node.members ?? []).map(print).join(",\n");
-      return `{\n${members}\n}`;
+      return braceBlock(members);
     }
 
     case "TSEnumMember": {
@@ -724,7 +724,7 @@ export function print(node) {
 
     case "TSModuleBlock": {
       const body = (node.body ?? []).map(print).join("\n");
-      return `{\n${body}\n}`;
+      return braceBlock(body);
     }
 
     case "TSNamespaceExportDeclaration":
@@ -945,6 +945,30 @@ export function print(node) {
  * @param {object} node
  * @return {string}
  */
+/**
+ * Indents every non-empty line of a block's inner content by one level.
+ * Nesting compounds naturally: each enclosing block re-indents the
+ * already-formatted child string.
+ * @param {string} text
+ * @return {string}
+ */
+function indent(text) {
+  return text
+    .split("\n")
+    .map((line) => (line ? `  ${line}` : line))
+    .join("\n");
+}
+
+/**
+ * Wraps already-joined statement text in a brace block, indented one level.
+ * Empty content collapses to `{}`.
+ * @param {string} inner
+ * @return {string}
+ */
+function braceBlock(inner) {
+  return inner ? `{\n${indent(inner)}\n}` : "{}";
+}
+
 function printTypeAnnotated(name, node) {
   const optional = node.optional ? "?" : "";
   const typeAnnotation = node.typeAnnotation ? print(node.typeAnnotation) : "";

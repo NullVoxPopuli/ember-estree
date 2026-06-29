@@ -166,8 +166,8 @@ const Badge = <template><span>hi</span></template>;
     const printed = print(enumNode);
     expect(printed).toMatchInlineSnapshot(`
       "enum Color {
-      Red,
-      Blue = 1
+        Red,
+        Blue = 1
       }"
     `);
   });
@@ -178,10 +178,31 @@ const Badge = <template><span>hi</span></template>;
     const printed = print(parse(`enum Color { Red, Green, Blue }`, { filePath: "x.gts" }).program);
     expect(printed).toMatchInlineSnapshot(`
       "enum Color {
-      Red,
-      Green,
-      Blue
+        Red,
+        Green,
+        Blue
       }"
+    `);
+  });
+
+  it("indents nested blocks and collapses empty ones", () => {
+    const source = `class Foo {
+  go() {
+    if (x) {
+      return 1;
+    }
+  }
+}
+function empty() {}`;
+    expect(print(parse(source, { filePath: "x.gts" }).program)).toMatchInlineSnapshot(`
+      "class Foo {
+        go() {
+          if (x) {
+            return 1;
+          }
+        }
+      }
+      function empty() {}"
     `);
   });
 
