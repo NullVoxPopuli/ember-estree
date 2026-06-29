@@ -1,5 +1,16 @@
 # Changelog
 
+## Release (2026-06-29)
+
+* ember-estree 0.6.5 (patch)
+
+#### :bug: Bug Fix
+* `ember-estree`
+  * [#57](https://github.com/NullVoxPopuli/ember-estree/pull/57) Print ParenthesizedExpression and Glimmer block params ([@NullVoxPopuli](https://github.com/NullVoxPopuli))
+
+#### Committers: 1
+- [@NullVoxPopuli](https://github.com/NullVoxPopuli)
+
 ## Release (2026-05-12)
 
 * ember-estree 0.6.4 (patch)
