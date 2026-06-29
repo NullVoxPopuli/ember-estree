@@ -2,6 +2,17 @@
 
 ## Release (2026-06-29)
 
+* ember-estree 0.6.7 (patch)
+
+#### :bug: Bug Fix
+* `ember-estree`
+  * [#61](https://github.com/NullVoxPopuli/ember-estree/pull/61) Preserve TypeScript `type` modifier when printing imports/exports ([@NullVoxPopuli](https://github.com/NullVoxPopuli))
+
+#### Committers: 1
+- [@NullVoxPopuli](https://github.com/NullVoxPopuli)
+
+## Release (2026-06-29)
+
 * ember-estree 0.6.6 (patch)
 
 #### :bug: Bug Fix
