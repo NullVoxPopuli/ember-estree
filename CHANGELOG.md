@@ -2,6 +2,17 @@
 
 ## Release (2026-06-29)
 
+* ember-estree 0.6.8 (patch)
+
+#### :bug: Bug Fix
+* `ember-estree`
+  * [#63](https://github.com/NullVoxPopuli/ember-estree/pull/63) Add print support for TSParenthesizedType ([@NullVoxPopuli](https://github.com/NullVoxPopuli))
+
+#### Committers: 1
+- [@NullVoxPopuli](https://github.com/NullVoxPopuli)
+
+## Release (2026-06-29)
+
 * ember-estree 0.6.7 (patch)
 
 #### :bug: Bug Fix
