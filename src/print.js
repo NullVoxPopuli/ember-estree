@@ -26,9 +26,15 @@ export function print(node) {
     case "Literal":
     case "StringLiteral":
       if (typeof node.value === "string") {
+        // Prefer the original source: it preserves escape sequences
+        // (`\n`, `\t`, `\uXXXX`, escaped quotes) and the original quote
+        // style exactly. Emitting the cooked `value` turns escapes into raw
+        // characters and corrupts the string (e.g. `'\n'` -> a real newline,
+        // which breaks a single-quoted literal).
         const raw = node.extra?.raw ?? node.raw;
-        const quote = raw && (raw[0] === "'" || raw[0] === '"' || raw[0] === "`") ? raw[0] : '"';
-        return `${quote}${node.value}${quote}`;
+        if (raw != null) return raw;
+        // Synthesized node with no source — quote and escape the value.
+        return JSON.stringify(node.value);
       }
       if (node.raw != null) return node.raw;
       return String(node.value);
