@@ -490,7 +490,7 @@ describe("print", () => {
         { type: "TSEnumMember", id: { type: "Identifier", name: "B" } },
       ],
     };
-    expect(print(node)).toBe("{\nA,\nB\n}");
+    expect(print(node)).toBe("{\n  A,\n  B\n}");
   });
 
   it("prints TSEnumDeclaration with a TSEnumBody (newer oxc shape)", () => {
@@ -505,7 +505,7 @@ describe("print", () => {
         ],
       },
     };
-    expect(print(node)).toBe("enum Color {\nRed,\nGreen\n}");
+    expect(print(node)).toBe("enum Color {\n  Red,\n  Green\n}");
   });
 
   it("prints TSTupleType", () => {
