@@ -1,5 +1,18 @@
 # Changelog
 
+## Release (2026-06-30)
+
+* ember-estree 0.6.9 (patch)
+
+#### :bug: Bug Fix
+* `ember-estree`
+  * [#67](https://github.com/NullVoxPopuli/ember-estree/pull/67) Add primitive indentation to printed block output ([@NullVoxPopuli](https://github.com/NullVoxPopuli))
+  * [#68](https://github.com/NullVoxPopuli/ember-estree/pull/68) Print string literals from raw source to preserve escapes ([@NullVoxPopuli](https://github.com/NullVoxPopuli))
+  * [#65](https://github.com/NullVoxPopuli/ember-estree/pull/65) Print remaining TS/V8 nodes; fix dropped enum members ([@NullVoxPopuli](https://github.com/NullVoxPopuli))
+
+#### Committers: 1
+- [@NullVoxPopuli](https://github.com/NullVoxPopuli)
+
 ## Release (2026-06-29)
 
 * ember-estree 0.6.8 (patch)
