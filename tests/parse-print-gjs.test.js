@@ -3,6 +3,11 @@ import { parse, print } from "../src/index.js";
 import { findAllNodes } from "./helpers.js";
 
 describe("parse + print (.gjs)", () => {
+  it("round-trips strings with escape sequences", () => {
+    const source = `const msg = '\\nLine "two"\\t\\u00e9';`;
+    expect(print(parse(source).program)).toBe(source);
+  });
+
   it("round-trips a simple gjs template", () => {
     const source = `const Greeting = <template><h1>Hello</h1></template>;`;
     const ast = parse(source);

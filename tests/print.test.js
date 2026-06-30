@@ -271,6 +271,18 @@ describe("print", () => {
     expect(print({ type: "Literal", value: 42, raw: "42" })).toBe("42");
   });
 
+  it("preserves escape sequences in string Literals via raw", () => {
+    // value is cooked (real newline); raw keeps the source escape.
+    expect(print({ type: "Literal", value: "\nhi", raw: "'\\nhi'" })).toBe("'\\nhi'");
+    expect(print({ type: "Literal", value: 'say "hi"', raw: '"say \\"hi\\""' })).toBe(
+      '"say \\"hi\\""',
+    );
+  });
+
+  it("escapes synthesized string Literals with no raw", () => {
+    expect(print({ type: "Literal", value: "a\nb" })).toBe('"a\\nb"');
+  });
+
   it("prints ImportDeclaration", () => {
     const node = {
       type: "ImportDeclaration",
