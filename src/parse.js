@@ -361,10 +361,16 @@ function toPlaceholderJS(source, parseResults) {
 
     parts.push(source.slice(cursor, start));
 
+    // Blank out backticks and dollar signs instead of backslash-escaping
+    // them: escaping grows the content, and once the growth exceeds the
+    // padding slack the placeholder no longer lines up with the original
+    // region — matchPlaceholder then rejects it and the raw placeholder
+    // leaks into the AST (ember-tooling/ember-eslint-parser#230). The
+    // content is discarded when the Glimmer AST is spliced in, so only
+    // its length and line structure matter.
     const content = source
       .slice(pr.contentRange.startUtf16Codepoint, pr.contentRange.endUtf16Codepoint)
-      .replace(/`/g, "\\`")
-      .replace(/\$/g, "\\$");
+      .replace(/[`$]/g, " ");
 
     if (pr.type === "class-member") {
       const spaces = tplLength - content.length - 10; // "static{`" + "`}" = 10
