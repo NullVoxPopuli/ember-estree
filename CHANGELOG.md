@@ -1,5 +1,16 @@
 # Changelog
 
+## Release (2026-07-03)
+
+* ember-estree 0.6.10 (patch)
+
+#### :bug: Bug Fix
+* `ember-estree`
+  * [#69](https://github.com/NullVoxPopuli/ember-estree/pull/69) Blank out backticks/dollars in placeholder JS instead of escaping ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
+#### Committers: 1
+- @NullVoxPopuli's reduced-access machine account for AI usage ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
 ## Release (2026-06-30)
 
 * ember-estree 0.6.9 (patch)
