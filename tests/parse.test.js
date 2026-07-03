@@ -149,4 +149,65 @@ class B extends Component {
     const templates = findAllNodes(ast, "GlimmerTemplate");
     expect(templates.length).toBe(2);
   });
+
+  // ember-tooling/ember-eslint-parser#230: backticks/dollars in template
+  // content used to be backslash-escaped in the placeholder JS, growing it
+  // past the original region once the escapes exceeded the padding slack
+  // (11 chars for class members, 19 for expressions). The end-range check
+  // in matchPlaceholder then failed and the raw placeholder StaticBlock/
+  // TemplateLiteral leaked into the AST with every later offset shifted.
+  describe("placeholder-hostile template content (` and $)", () => {
+    function expectSingleTemplate(source, expected) {
+      const ast = parse(source);
+      const template = findNode(ast, "GlimmerTemplate");
+      expect(template).toBeTruthy();
+      expect(source.substring(template.start, template.end)).toBe(expected);
+      expect(findNode(ast, "StaticBlock")).toBeNull();
+      expect(findNode(ast, "TemplateLiteral")).toBeNull();
+    }
+
+    it("class body template with many backticks in a comment", () => {
+      const tpl = `<template>
+    {{!  \`asd\` \`qwe\` \`zxc\` \`undefined\` \`asd\` }}
+    {{! \`@foo\` }}
+    123
+  </template>`;
+      const source = `export default class MyComponent extends Component {
+  ${tpl}
+}`;
+      const ast = parse(source);
+
+      const classDecl = findNode(ast, "ClassDeclaration");
+      expect(classDecl.body.body.length).toBe(1);
+      expect(classDecl.body.body[0].type).toBe("GlimmerTemplate");
+      expect(source.substring(classDecl.body.body[0].start, classDecl.body.body[0].end)).toBe(tpl);
+    });
+
+    it("class body template with many dollar signs", () => {
+      const tpl = `<template>{{! ${"$".repeat(30)} }}</template>`;
+      const source = `export default class MyComponent extends Component {
+  ${tpl}
+}`;
+      expectSingleTemplate(source, tpl);
+    });
+
+    it("expression template with many backticks", () => {
+      const tpl = `<template>{{! ${"`x` ".repeat(10)}}}</template>`;
+      const source = `const x = ${tpl};`;
+      expectSingleTemplate(source, tpl);
+    });
+
+    it("keeps offsets accurate for code after a backtick-heavy template", () => {
+      const tpl = `<template>{{! ${"`".repeat(30)} }}</template>`;
+      const source = `export default class MyComponent extends Component {
+  ${tpl}
+}
+const after = 1;`;
+      const ast = parse(source);
+
+      const decl = findNode(ast, "VariableDeclaration");
+      expect(decl).toBeTruthy();
+      expect(source.substring(decl.start, decl.end)).toBe("const after = 1;");
+    });
+  });
 });
