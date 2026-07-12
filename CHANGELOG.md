@@ -1,5 +1,20 @@
 # Changelog
 
+## Release (2026-07-12)
+
+* ember-estree 0.6.11 (patch)
+
+#### :bug: Bug Fix
+* `ember-estree`
+  * [#73](https://github.com/NullVoxPopuli/ember-estree/pull/73) print: accept File nodes and weave comments into the output ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
+#### :house: Internal
+* `ember-estree`
+  * [#71](https://github.com/NullVoxPopuli/ember-estree/pull/71) Align bench delta formatting with ember-eslint-parser ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
+#### Committers: 1
+- @NullVoxPopuli's reduced-access machine account for AI usage ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
 ## Release (2026-07-03)
 
 * ember-estree 0.6.10 (patch)
