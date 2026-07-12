@@ -1,4 +1,82 @@
 /**
+ * Prints a comment as it appeared in source.
+ * @param {object} comment - `{ type: "Line" | "Block", value }`
+ * @return {string}
+ */
+function printComment(comment) {
+  return comment.type === "Block" ? `/*${comment.value}*/` : `//${comment.value}`;
+}
+
+// Comment-weaving state for `print(File)`. `print` is synchronous and
+// single-threaded, so module-level state is safe; `printFile` saves and
+// restores it so nested calls stay well-behaved.
+let fileComments = null;
+let commentCursor = 0;
+
+/**
+ * Prints and consumes any not-yet-emitted comments that start before
+ * `position` in the original source.
+ *
+ * `fileComments` is sorted and `commentCursor` only ever advances, so the
+ * total flushing work across an entire `print(File)` is O(comments) — each
+ * comment is visited exactly once, no matter how many nodes are printed.
+ *
+ * @param {number} position
+ * @return {string}
+ */
+function flushCommentsBefore(position) {
+  let out = "";
+  while (commentCursor < fileComments.length && fileComments[commentCursor].start < position) {
+    out += `${printComment(fileComments[commentCursor])}\n`;
+    commentCursor += 1;
+  }
+  return out;
+}
+
+/**
+ * Prints a File node: its program, with `file.comments` woven back in
+ * before the nearest printed node that follows them in the original
+ * source (and any remaining comments appended at the end of the file).
+ *
+ * Placement is approximate -- a same-line trailing comment becomes a
+ * leading comment of the next node -- so pair the output with a formatter
+ * (e.g. prettier) when exact layout matters.
+ *
+ * @param {object} file
+ * @return {string}
+ */
+function printFile(file) {
+  const previousComments = fileComments;
+  const previousCursor = commentCursor;
+
+  // `filter` already yields a fresh array, so sorting in place is safe and
+  // the caller's `file.comments` is never mutated. (oxc emits comments
+  // pre-sorted, making the sort a cheap single pass.)
+  const comments = file.comments?.length
+    ? file.comments
+        .filter((comment) => typeof comment.start === "number")
+        .sort((a, b) => a.start - b.start)
+    : null;
+
+  fileComments = comments?.length ? comments : null;
+  commentCursor = 0;
+
+  try {
+    let output = print(file.program);
+    const trailing = fileComments ? flushCommentsBefore(Infinity) : "";
+
+    if (trailing) {
+      output = output ? `${output}\n${trailing}` : trailing;
+    }
+
+    return output;
+  } finally {
+    fileComments = previousComments;
+    commentCursor = previousCursor;
+  }
+}
+
+/**
  * Recursive AST printer that handles ESTree, TypeScript, and
  * Glimmer template node types.
  *
@@ -6,7 +84,9 @@
  *
  * Tools like zmod use span-based patching (preserving the original source
  * for unchanged regions), so this printer is typically only invoked for
- * newly-created AST nodes (via builders).
+ * newly-created AST nodes (via builders) — with one exception: a `File`
+ * node (as returned by `toTree`) is printed in full, with its `comments`
+ * woven back into the output.
  *
  * @param {object} node - The AST node to print
  * @return {string}
@@ -15,7 +95,26 @@ export function print(node) {
   if (!node) return "";
   if (typeof node === "string") return node;
 
+  // Comment weaving — active only while a comment-carrying `print(File)`
+  // is in flight. When any comments start before this node in the original
+  // source, emit them first, then re-enter (the cursor has advanced past
+  // them, so the recursion falls straight through to the switch). Outside
+  // of `print(File)` the guard short-circuits on its first check, so
+  // standalone printing pays a single null test.
+  if (
+    fileComments !== null &&
+    commentCursor < fileComments.length &&
+    typeof node.start === "number" &&
+    fileComments[commentCursor].start < node.start
+  ) {
+    return flushCommentsBefore(node.start) + print(node);
+  }
+
   switch (node.type) {
+    // ── File (root of `toTree`) ───────────────────────────────────
+    case "File":
+      return printFile(node);
+
     // ── Identifiers & Literals ────────────────────────────────────
     case "Identifier":
       return printTypeAnnotated(node.name, node);
