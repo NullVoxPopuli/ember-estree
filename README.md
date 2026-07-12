@@ -57,6 +57,17 @@ print({
 // => "<template>Hello</template>"
 ```
 
+`print` also accepts the `File` node returned by `toTree`, printing the whole program with `file.comments` woven back into the output (each comment is emitted before the nearest node that follows it in the original source). Placement is approximate — a trailing same-line comment becomes a leading comment of the next node — so pair the output with a formatter (e.g. prettier) when exact layout matters.
+
+```js
+import { toTree, print } from "ember-estree";
+
+let tree = toTree(`// greet the user\nlet greeting = "hello";`);
+
+print(tree);
+// => '// greet the user\nlet greeting = "hello";'
+```
+
 ## Options
 
 Both `toTree` and `parse` accept an options object as their second argument.

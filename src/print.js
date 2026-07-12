@@ -1,4 +1,72 @@
 /**
+ * Prints a comment as it appeared in source.
+ * @param {object} comment - `{ type: "Line" | "Block", value }`
+ * @return {string}
+ */
+function printComment(comment) {
+  return comment.type === "Block" ? `/*${comment.value}*/` : `//${comment.value}`;
+}
+
+// Comment-weaving state for `print(File)`. `print` is synchronous and
+// single-threaded, so module-level state is safe; `printFile` saves and
+// restores it so nested calls stay well-behaved.
+let fileComments = null;
+let commentCursor = 0;
+
+/**
+ * Prints and consumes any not-yet-emitted comments that start before
+ * `position` in the original source.
+ * @param {number | undefined} position
+ * @return {string}
+ */
+function flushCommentsBefore(position) {
+  if (!fileComments || typeof position !== "number") return "";
+
+  let out = "";
+  while (commentCursor < fileComments.length && fileComments[commentCursor].start < position) {
+    out += `${printComment(fileComments[commentCursor])}\n`;
+    commentCursor += 1;
+  }
+  return out;
+}
+
+/**
+ * Prints a File node: its program, with `file.comments` woven back in
+ * before the nearest printed node that follows them in the original
+ * source (and any remaining comments appended at the end of the file).
+ *
+ * Placement is approximate -- a same-line trailing comment becomes a
+ * leading comment of the next node -- so pair the output with a formatter
+ * (e.g. prettier) when exact layout matters.
+ *
+ * @param {object} file
+ * @return {string}
+ */
+function printFile(file) {
+  const previousComments = fileComments;
+  const previousCursor = commentCursor;
+
+  fileComments = [...(file.comments ?? [])]
+    .filter((comment) => typeof comment.start === "number")
+    .sort((a, b) => a.start - b.start);
+  commentCursor = 0;
+
+  try {
+    let output = print(file.program);
+    const trailing = flushCommentsBefore(Infinity);
+
+    if (trailing) {
+      output = output ? `${output}\n${trailing}` : trailing;
+    }
+
+    return output;
+  } finally {
+    fileComments = previousComments;
+    commentCursor = previousCursor;
+  }
+}
+
+/**
  * Recursive AST printer that handles ESTree, TypeScript, and
  * Glimmer template node types.
  *
@@ -6,7 +74,9 @@
  *
  * Tools like zmod use span-based patching (preserving the original source
  * for unchanged regions), so this printer is typically only invoked for
- * newly-created AST nodes (via builders).
+ * newly-created AST nodes (via builders) — with one exception: a `File`
+ * node (as returned by `toTree`) is printed in full, with its `comments`
+ * woven back into the output.
  *
  * @param {object} node - The AST node to print
  * @return {string}
@@ -15,6 +85,20 @@ export function print(node) {
   if (!node) return "";
   if (typeof node === "string") return node;
 
+  if (node.type === "File") return printFile(node);
+
+  const leading = flushCommentsBefore(node.start);
+  const printed = printNode(node);
+
+  return leading ? leading + printed : printed;
+}
+
+/**
+ * The per-node-type printer behind `print`.
+ * @param {object} node - The AST node to print
+ * @return {string}
+ */
+function printNode(node) {
   switch (node.type) {
     // ── Identifiers & Literals ────────────────────────────────────
     case "Identifier":
