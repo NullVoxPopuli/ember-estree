@@ -16,12 +16,15 @@ let commentCursor = 0;
 /**
  * Prints and consumes any not-yet-emitted comments that start before
  * `position` in the original source.
- * @param {number | undefined} position
+ *
+ * `fileComments` is sorted and `commentCursor` only ever advances, so the
+ * total flushing work across an entire `print(File)` is O(comments) — each
+ * comment is visited exactly once, no matter how many nodes are printed.
+ *
+ * @param {number} position
  * @return {string}
  */
 function flushCommentsBefore(position) {
-  if (!fileComments || typeof position !== "number") return "";
-
   let out = "";
   while (commentCursor < fileComments.length && fileComments[commentCursor].start < position) {
     out += `${printComment(fileComments[commentCursor])}\n`;
@@ -46,14 +49,21 @@ function printFile(file) {
   const previousComments = fileComments;
   const previousCursor = commentCursor;
 
-  fileComments = [...(file.comments ?? [])]
-    .filter((comment) => typeof comment.start === "number")
-    .sort((a, b) => a.start - b.start);
+  // `filter` already yields a fresh array, so sorting in place is safe and
+  // the caller's `file.comments` is never mutated. (oxc emits comments
+  // pre-sorted, making the sort a cheap single pass.)
+  const comments = file.comments?.length
+    ? file.comments
+        .filter((comment) => typeof comment.start === "number")
+        .sort((a, b) => a.start - b.start)
+    : null;
+
+  fileComments = comments?.length ? comments : null;
   commentCursor = 0;
 
   try {
     let output = print(file.program);
-    const trailing = flushCommentsBefore(Infinity);
+    const trailing = fileComments ? flushCommentsBefore(Infinity) : "";
 
     if (trailing) {
       output = output ? `${output}\n${trailing}` : trailing;
@@ -85,21 +95,26 @@ export function print(node) {
   if (!node) return "";
   if (typeof node === "string") return node;
 
-  if (node.type === "File") return printFile(node);
+  // Comment weaving — active only while a comment-carrying `print(File)`
+  // is in flight. When any comments start before this node in the original
+  // source, emit them first, then re-enter (the cursor has advanced past
+  // them, so the recursion falls straight through to the switch). Outside
+  // of `print(File)` the guard short-circuits on its first check, so
+  // standalone printing pays a single null test.
+  if (
+    fileComments !== null &&
+    commentCursor < fileComments.length &&
+    typeof node.start === "number" &&
+    fileComments[commentCursor].start < node.start
+  ) {
+    return flushCommentsBefore(node.start) + print(node);
+  }
 
-  const leading = flushCommentsBefore(node.start);
-  const printed = printNode(node);
-
-  return leading ? leading + printed : printed;
-}
-
-/**
- * The per-node-type printer behind `print`.
- * @param {object} node - The AST node to print
- * @return {string}
- */
-function printNode(node) {
   switch (node.type) {
+    // ── File (root of `toTree`) ───────────────────────────────────
+    case "File":
+      return printFile(node);
+
     // ── Identifiers & Literals ────────────────────────────────────
     case "Identifier":
       return printTypeAnnotated(node.name, node);
