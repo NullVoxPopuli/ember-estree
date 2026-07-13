@@ -14,6 +14,8 @@ export interface FileNode extends ASTNode {
   type: "File";
   program: ASTNode;
   comments: ASTNode[];
+  /** The original source text; `print` uses it to preserve blank lines. */
+  source?: string;
 }
 
 export interface TemplateResult {

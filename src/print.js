@@ -12,6 +12,59 @@ function printComment(comment) {
 // restores it so nested calls stay well-behaved.
 let fileComments = null;
 let commentCursor = 0;
+// Original source of the File being printed (when available) — used to
+// preserve blank-line separation between statements.
+let fileSource = null;
+
+/**
+ * Joins printed statements (or class/interface/enum members, switch
+ * cases, ...) with newlines. While printing a File whose original source
+ * is known, a gap of two-or-more newlines between consecutive nodes in
+ * that source is preserved as one blank line; standalone printing joins
+ * with single newlines exactly as before.
+ *
+ * @param {Array<object> | null | undefined} nodes
+ * @return {string}
+ */
+function printStatements(nodes) {
+  if (!nodes || nodes.length === 0) return "";
+  if (fileSource === null) return nodes.map(print).join("\n");
+
+  let out = "";
+  let previous = null;
+
+  for (const node of nodes) {
+    const printed = print(node);
+
+    if (previous !== null) {
+      out += hasBlankLineBetween(previous, node) ? "\n\n" : "\n";
+    }
+
+    out += printed;
+    previous = node;
+  }
+
+  return out;
+}
+
+/**
+ * Whether the original source separates `a` and `b` with at least one
+ * blank line (i.e. two newlines between `a`'s end and `b`'s start).
+ *
+ * @param {object} a
+ * @param {object} b
+ * @return {boolean}
+ */
+function hasBlankLineBetween(a, b) {
+  if (typeof a.end !== "number" || typeof b.start !== "number" || b.start <= a.end) {
+    return false;
+  }
+
+  const between = fileSource.slice(a.end, b.start);
+  const firstNewline = between.indexOf("\n");
+
+  return firstNewline !== -1 && between.indexOf("\n", firstNewline + 1) !== -1;
+}
 
 /**
  * Prints and consumes any not-yet-emitted comments that start before
@@ -48,6 +101,7 @@ function flushCommentsBefore(position) {
 function printFile(file) {
   const previousComments = fileComments;
   const previousCursor = commentCursor;
+  const previousSource = fileSource;
 
   // `filter` already yields a fresh array, so sorting in place is safe and
   // the caller's `file.comments` is never mutated. (oxc emits comments
@@ -60,6 +114,7 @@ function printFile(file) {
 
   fileComments = comments?.length ? comments : null;
   commentCursor = 0;
+  fileSource = typeof file.source === "string" ? file.source : null;
 
   try {
     let output = print(file.program);
@@ -73,6 +128,7 @@ function printFile(file) {
   } finally {
     fileComments = previousComments;
     commentCursor = previousCursor;
+    fileSource = previousSource;
   }
 }
 
@@ -313,7 +369,7 @@ export function print(node) {
 
     case "BlockStatement":
     case "StaticBlock": {
-      const body = (node.body ?? []).map(print).join("\n");
+      const body = printStatements(node.body);
       return braceBlock(body);
     }
 
@@ -354,13 +410,13 @@ export function print(node) {
 
     case "SwitchStatement": {
       const disc = print(node.discriminant);
-      const cases = (node.cases ?? []).map(print).join("\n");
+      const cases = printStatements(node.cases);
       return `switch (${disc}) ${braceBlock(cases)}`;
     }
 
     case "SwitchCase": {
       const test = node.test ? `case ${print(node.test)}:` : "default:";
-      const body = (node.consequent ?? []).map(print).join("\n");
+      const body = printStatements(node.consequent);
       return body ? `${test}\n${indent(body)}` : test;
     }
 
@@ -434,7 +490,7 @@ export function print(node) {
     }
 
     case "ClassBody": {
-      const body = (node.body ?? []).map(print).join("\n");
+      const body = printStatements(node.body);
       return braceBlock(body);
     }
 
@@ -733,7 +789,7 @@ export function print(node) {
 
     // ── TypeScript: object types & signatures ──────────────────────
     case "TSTypeLiteral": {
-      const members = (node.members ?? []).map(print).join("\n");
+      const members = printStatements(node.members);
       return `{\n${members}\n}`;
     }
 
@@ -782,7 +838,7 @@ export function print(node) {
     }
 
     case "TSInterfaceBody": {
-      const body = (node.body ?? []).map(print).join("\n");
+      const body = printStatements(node.body);
       return braceBlock(body);
     }
 
@@ -828,7 +884,7 @@ export function print(node) {
     }
 
     case "TSModuleBlock": {
-      const body = (node.body ?? []).map(print).join("\n");
+      const body = printStatements(node.body);
       return braceBlock(body);
     }
 
@@ -1037,7 +1093,7 @@ export function print(node) {
 
     // ── Program (root) ─────────────────────────────────────────────
     case "Program":
-      return (node.body ?? []).map(print).join("\n");
+      return printStatements(node.body);
 
     default:
       throw new Error(`ember-estree print: unsupported node type '${node.type}'`);

@@ -110,6 +110,8 @@ export function toTree(source, options = {}) {
         type: "File",
         program: oxcResult.program,
         comments: oxcResult.comments || [],
+        // the original text, so `print` can preserve blank-line layout
+        source,
         start: oxcResult.program.start,
         end: oxcResult.program.end,
       },

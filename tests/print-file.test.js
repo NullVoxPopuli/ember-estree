@@ -40,6 +40,7 @@ describe("print(File)", () => {
     expect(print(tree)).toMatchInlineSnapshot(`
       "/* setup */
       const a = 1;
+
       /**
        * doc comment
        */
@@ -107,5 +108,108 @@ describe("print(File)", () => {
     delete tree.comments;
 
     expect(print(tree)).toMatchInlineSnapshot(`"const a = 1;"`);
+  });
+});
+
+describe("print(File) blank-line preservation", () => {
+  it("keeps blank lines between top-level statements", () => {
+    const source = [`const a = 1;`, ``, `const b = 2;`, `const c = 3;`].join("\n");
+    const tree = toTree(source, { filePath: "m.js" });
+
+    expect(print(tree)).toMatchInlineSnapshot(`
+      "const a = 1;
+
+      const b = 2;
+      const c = 3;"
+    `);
+  });
+
+  it("keeps blank lines between import groups", () => {
+    const source = [
+      `import { getOwner } from "@ember/owner";`,
+      `import * as QUnit from "qunit";`,
+      ``,
+      `import Application from "#app/app.js";`,
+      `import config from "#config";`,
+      ``,
+      `export function start() {`,
+      `  QUnit.start();`,
+      `}`,
+    ].join("\n");
+    const tree = toTree(source, { filePath: "m.js" });
+
+    expect(print(tree)).toMatchInlineSnapshot(`
+      "import { getOwner } from "@ember/owner";
+      import * as QUnit from "qunit";
+
+      import Application from "#app/app.js";
+      import config from "#config";
+
+      export function start() {
+        QUnit.start();
+      }"
+    `);
+  });
+
+  it("keeps blank lines inside function bodies and class bodies", () => {
+    const source = [
+      `class Foo {`,
+      `  a = 1;`,
+      ``,
+      `  method() {`,
+      `    const x = 1;`,
+      ``,
+      `    return x;`,
+      `  }`,
+      `}`,
+    ].join("\n");
+    const tree = toTree(source, { filePath: "m.js" });
+
+    expect(print(tree)).toMatchInlineSnapshot(`
+      "class Foo {
+        a = 1;
+
+        method() {
+          const x = 1;
+
+          return x;
+        }
+      }"
+    `);
+  });
+
+  it("keeps a blank line that precedes a comment", () => {
+    const source = [`const a = 1;`, ``, `// setup`, `const b = 2;`].join("\n");
+    const tree = toTree(source, { filePath: "m.js" });
+
+    expect(print(tree)).toMatchInlineSnapshot(`
+      "const a = 1;
+
+      // setup
+      const b = 2;"
+    `);
+  });
+
+  it("collapses runs of blank lines to a single blank line", () => {
+    const source = [`const a = 1;`, ``, ``, ``, `const b = 2;`].join("\n");
+    const tree = toTree(source, { filePath: "m.js" });
+
+    expect(print(tree)).toMatchInlineSnapshot(`
+      "const a = 1;
+
+      const b = 2;"
+    `);
+  });
+
+  it("does not affect standalone printing (no File in flight)", () => {
+    const source = [`const a = 1;`, ``, `const b = 2;`].join("\n");
+    const tree = toTree(source, { filePath: "m.js" });
+
+    // printing the bare Program has no source attached, so statements
+    // join with single newlines exactly as before
+    expect(print(tree.program)).toMatchInlineSnapshot(`
+      "const a = 1;
+      const b = 2;"
+    `);
   });
 });
