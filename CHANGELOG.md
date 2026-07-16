@@ -1,5 +1,16 @@
 # Changelog
 
+## Release (2026-07-16)
+
+* ember-estree 0.7.0 (minor)
+
+#### :rocket: Enhancement
+* `ember-estree`
+  * [#75](https://github.com/NullVoxPopuli/ember-estree/pull/75) Add statement/statements tagged-template AST builders ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
+#### Committers: 1
+- @NullVoxPopuli's reduced-access machine account for AI usage ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
 ## Release (2026-07-12)
 
 * ember-estree 0.6.11 (patch)
