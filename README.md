@@ -68,6 +68,50 @@ print(tree);
 // => '// greet the user\nlet greeting = "hello";'
 ```
 
+### Building
+
+`statement` and `statements` are tagged templates that build AST from source text — like [`@babel/template`](https://babeljs.io/docs/babel-template), but gjs/gts-aware: `<template>` regions become `Glimmer*` nodes, and TypeScript syntax is understood.
+
+```js
+import { statement, statements } from "ember-estree";
+
+statement`import setup from "some-package";`;
+// => ImportDeclaration
+
+statements`
+  const greeting = "hello";
+  <template>{{greeting}}</template>
+`;
+// => [VariableDeclaration, GlimmerTemplate]
+```
+
+Interpolations may be strings (inserted verbatim), AST nodes (printed), or arrays of either (comma-separated):
+
+```js
+let local = "setupInspector";
+let callee = { type: "Identifier", name: local };
+
+statement`import ${local} from "some-package";`;
+statement`let inspector = ${callee}(this);`;
+```
+
+Built nodes carry no source positions, so they can be spliced anywhere into a tree returned by `toTree` and printed — comment weaving in the host file is unaffected:
+
+```js
+import { toTree, print, statement } from "ember-estree";
+
+let tree = toTree(source);
+tree.program.body.unshift(statement`import "./styles.css";`);
+print(tree);
+```
+
+For node kinds that are not statements (class members, object properties, ...), build the smallest statement containing one and pluck it out:
+
+```js
+let member = statement`class _ { inspector = setup(this); }`.body.body[0];
+// => PropertyDefinition
+```
+
 ## Options
 
 Both `toTree` and `parse` accept an options object as their second argument.

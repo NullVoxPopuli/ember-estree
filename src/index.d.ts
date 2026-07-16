@@ -65,4 +65,14 @@ export function toTree(source: string, options?: ParseOptions): FileNode | Templ
 export function parse(source: string, options?: ParseOptions): FileNode | TemplateResult;
 export function print(node: ASTNode): string;
 
+/**
+ * Values a builder template can interpolate: AST nodes are printed,
+ * arrays are comma-separated, strings and other primitives are inserted
+ * verbatim.
+ */
+export type BuilderValue = string | number | boolean | ASTNode | BuilderValue[];
+
+export function statement(strings: TemplateStringsArray, ...values: BuilderValue[]): ASTNode;
+export function statements(strings: TemplateStringsArray, ...values: BuilderValue[]): ASTNode[];
+
 export const glimmerVisitorKeys: Record<string, string[]>;
