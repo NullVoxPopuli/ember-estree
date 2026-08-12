@@ -52,6 +52,15 @@ importers:
         specifier: ^1.1.4
         version: 1.1.4
 
+  examples/ast:
+    devDependencies:
+      ember-estree:
+        specifier: workspace:*
+        version: link:../..
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4
+
   examples/eslint-parser:
     devDependencies:
       ember-estree:
