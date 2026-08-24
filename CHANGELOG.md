@@ -1,5 +1,17 @@
 # Changelog
 
+## Release (2026-08-24)
+
+* ember-estree 0.7.1 (patch)
+
+#### :bug: Bug Fix
+* `ember-estree`
+  * [#78](https://github.com/NullVoxPopuli/ember-estree/pull/78) Use void placeholders so statement-start templates survive ASI ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+  * [#77](https://github.com/NullVoxPopuli/ember-estree/pull/77) Sort content-tag results into source order before building placeholders ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
+#### Committers: 1
+- @NullVoxPopuli's reduced-access machine account for AI usage ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
 ## Release (2026-07-16)
 
 * ember-estree 0.7.0 (minor)
