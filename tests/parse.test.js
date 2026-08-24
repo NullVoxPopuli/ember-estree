@@ -137,6 +137,30 @@ describe("parse", () => {
     expect(mustache).toBeTruthy();
   });
 
+  it("handles a template in a heritage clause before the class body template", () => {
+    // content-tag reports these two templates in the opposite order from
+    // their position in the source.
+    const source = [
+      "const mixin = (base, t) => base;",
+      "export class Both extends mixin(Object, <template>heritage</template>) {",
+      "  <template>own</template>",
+      "}",
+      "const after = 1;",
+    ].join("\n");
+    const ast = parse(source);
+
+    expect(ast.program.body.map((node) => node.type)).toEqual([
+      "VariableDeclaration",
+      "ExportNamedDeclaration",
+      "VariableDeclaration",
+    ]);
+    const templates = findAllNodes(ast, "GlimmerTemplate");
+    expect(templates.map((t) => source.slice(t.start, t.end))).toEqual([
+      "<template>heritage</template>",
+      "<template>own</template>",
+    ]);
+  });
+
   it("handles multiple classes with templates", () => {
     const source = `class A extends Component {
   <template><div>A</div></template>
