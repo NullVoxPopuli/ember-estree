@@ -88,6 +88,11 @@ export function toTree(source, options = {}) {
   }
 
   let parseResults = preprocessor.parse(source);
+  // content-tag reports a class's own template before a template that sits
+  // earlier in its heritage clause (`class A extends mixin(<template/>) {
+  // <template/> }`); `toPlaceholderJS` walks the source forward, so it needs
+  // them in source order.
+  parseResults.sort((a, b) => a.range.startUtf16Codepoint - b.range.startUtf16Codepoint);
   let js = toPlaceholderJS(source, parseResults);
 
   const useCustomParser = !!options.parser;
