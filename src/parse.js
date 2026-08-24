@@ -55,7 +55,7 @@ const preprocessor = new Preprocessor();
 const PLACEHOLDER_TYPES = new Set([
   "ExpressionStatement",
   "StaticBlock",
-  "TemplateLiteral",
+  "UnaryExpression",
   "ExportDefaultDeclaration",
 ]);
 
@@ -250,7 +250,7 @@ export function toTree(source, options = {}) {
         setParent(ast, parent);
         // Recurse into the Glimmer subtree so visitors fire on its nodes too.
         // The Glimmer root's parentPath reflects its true JS parent — the
-        // placeholder (TemplateLiteral / StaticBlock) is an internal artifact.
+        // placeholder (UnaryExpression / StaticBlock) is an internal artifact.
         if (hasVisitors) walkWithKeys(ast, parentPath);
         return;
       }
@@ -348,8 +348,15 @@ export const parse = toTree;
  * Replaces <template>...</template> regions with placeholder expressions
  * of the same character length that are valid JS/TS.
  *
- * Expression templates become:  `content          ` (backtick, space-padded)
+ * Expression templates become:  void `content     ` (void + backtick, space-padded)
  * Class member templates become: static{`content  `} (static block, space-padded)
+ *
+ * The `void` prefix matters at a statement start: a bare backtick literal
+ * after an unterminated expression statement continues it as a tagged
+ * template (`const y = x\n`...`` reads as `x`...``), whereas `void` cannot
+ * continue an expression, so automatic semicolon insertion applies exactly
+ * as it does for the real `<template>`. `void` is a keyword, so the
+ * placeholder also adds no identifier reference for scope analysis to see.
  *
  * This format is compatible with all JS/TS parsers including
  * oxc-parser, @typescript-eslint/parser, and @babel/eslint-parser.
@@ -381,8 +388,8 @@ function toPlaceholderJS(source, parseResults) {
       const spaces = tplLength - content.length - 10; // "static{`" + "`}" = 10
       parts.push(`static{\`${content}${" ".repeat(Math.max(0, spaces))}\`}`);
     } else {
-      const spaces = tplLength - content.length - 2; // "`" + "`" = 2
-      parts.push(`\`${content}${" ".repeat(Math.max(0, spaces))}\``);
+      const spaces = tplLength - content.length - 7; // "void `" + "`" = 7
+      parts.push(`void \`${content}${" ".repeat(Math.max(0, spaces))}\``);
     }
 
     cursor = end;

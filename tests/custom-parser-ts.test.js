@@ -26,7 +26,7 @@ describe("toTree — custom parser (typescript-eslint) — node identity", () =>
   it("preserves outer-AST node identity after a standalone template splice", () => {
     const source = `const Bar = () => <template></template>;`;
     // Snapshot ancestor references before toTree gets a chance to splice,
-    // and verify the placeholder is still a TemplateLiteral at that point.
+    // and verify the placeholder is still a `void` expression at that point.
     let origProgram, origDecl, origDtor, origArrow, origPlaceholder;
     const result = toTree(source, {
       parser: (js) => {
@@ -35,8 +35,8 @@ describe("toTree — custom parser (typescript-eslint) — node identity", () =>
         origDecl = origProgram.body[0]; // VariableDeclaration
         origDtor = origDecl.declarations[0]; // VariableDeclarator
         origArrow = origDtor.init; // ArrowFunctionExpression
-        origPlaceholder = origArrow.body; // TemplateLiteral (placeholder)
-        expect(origPlaceholder.type).toBe("TemplateLiteral");
+        origPlaceholder = origArrow.body; // UnaryExpression (placeholder)
+        expect(origPlaceholder.type).toBe("UnaryExpression");
         return parsed;
       },
     });
@@ -121,9 +121,9 @@ describe("toTree — custom parser (typescript-eslint) — templateInfos.placeho
     const result = toTree(source, {
       parser: (js) => {
         const parsed = tsParseForESLint(js);
-        // Capture the ArrowFunctionExpression body's placeholder (TemplateLiteral)
+        // Capture the ArrowFunctionExpression body's placeholder (UnaryExpression)
         capturedPlaceholder = parsed.ast.body[0].declarations[0].init.body;
-        expect(capturedPlaceholder.type).toBe("TemplateLiteral");
+        expect(capturedPlaceholder.type).toBe("UnaryExpression");
         return parsed;
       },
     });
@@ -148,8 +148,8 @@ describe("toTree — custom parser (typescript-eslint) — templateInfos.placeho
     // After: the GlimmerTemplate resolves to the placeholder's TS node.
     const glimmerTS = esMap.get(result.templateInfos[0].ast);
     expect(glimmerTS).toBeDefined();
-    // The placeholder was a TemplateLiteral (backtick) whose TS node is a
-    // string-typed expression — good enough for typed rules.
+    // The placeholder was a `void `...`` expression; its TS node stands in
+    // for the template for typed rules.
     expect(glimmerTS).toBe(esMap.get(result.templateInfos[0].placeholder));
   });
 });
