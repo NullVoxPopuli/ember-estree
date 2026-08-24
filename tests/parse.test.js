@@ -161,6 +161,29 @@ describe("parse", () => {
     ]);
   });
 
+  it("keeps a statement-start template separate from an unterminated expression before it", () => {
+    // Without a semicolon after `x`, a bare backtick placeholder would read
+    // as the tagged template `x`...``, swallowing the template.
+    const source = ["const x = 1", "const y = x", "<template>{{x}}</template>", ""].join("\n");
+    const ast = parse(source);
+
+    expect(ast.program.body.map((node) => node.type)).toEqual([
+      "VariableDeclaration",
+      "VariableDeclaration",
+      "GlimmerTemplate",
+    ]);
+  });
+
+  it("keeps a statement-start template separate from a call before it", () => {
+    const source = ["setup()", "<template>hi</template>", ""].join("\n");
+    const ast = parse(source);
+
+    expect(ast.program.body.map((node) => node.type)).toEqual([
+      "ExpressionStatement",
+      "GlimmerTemplate",
+    ]);
+  });
+
   it("handles multiple classes with templates", () => {
     const source = `class A extends Component {
   <template><div>A</div></template>

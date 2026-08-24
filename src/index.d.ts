@@ -32,7 +32,8 @@ export interface ParseOptions {
   templateOnly?: boolean;
   /**
    * Custom JS/TS parser. Called with the placeholder JS string
-   * (templates replaced with backtick expressions of equal length).
+   * (templates replaced with `void `...`` expressions, or `static{`...`}`
+   * blocks for class members, of equal length).
    * Must return at least `{ ast }`.
    */
   parser?: (placeholderJS: string) => { ast: ASTNode; [key: string]: unknown };
