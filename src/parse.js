@@ -237,9 +237,25 @@ export function toTree(source, options = {}) {
   function walkWithKeys(node, parentPath) {
     if (!node || !node.type) return;
 
+    const path = { node, parent: parentPath?.node ?? null, parentPath };
+
     if (hasTemplates && PLACEHOLDER_TYPES.has(node.type)) {
       const parseResult = matchPlaceholder(node);
-      if (parseResult) {
+      if (parseResult && node.type === "ExportDefaultDeclaration") {
+        // `export default <template>...</template>`: keep the export wrapper
+        // and splice its declaration, so the tree (and `print`) still carry
+        // the `export default`.
+        const ast = processPlaceholder(parseResult, node.declaration);
+        node.declaration = ast;
+        setParent(ast, node);
+        if (hasVisitors && !seen.has(node)) {
+          seen.add(node);
+          const handler = visitors[node.type];
+          if (handler) handler(node, path);
+          walkWithKeys(ast, path);
+        }
+        return;
+      } else if (parseResult) {
         // Splice in place: write the GlimmerTemplate directly into the parent's
         // slot instead of allocating new ancestor objects. This preserves node
         // identity for every ancestor, which matters for WeakMap-keyed data
@@ -250,13 +266,11 @@ export function toTree(source, options = {}) {
         setParent(ast, parent);
         // Recurse into the Glimmer subtree so visitors fire on its nodes too.
         // The Glimmer root's parentPath reflects its true JS parent — the
-        // placeholder (UnaryExpression / StaticBlock) is an internal artifact.
+        // placeholder (`void` expression / StaticBlock) is an internal artifact.
         if (hasVisitors) walkWithKeys(ast, parentPath);
         return;
       }
     }
-
-    const path = { node, parent: parentPath?.node ?? null, parentPath };
 
     if (hasVisitors && !seen.has(node)) {
       seen.add(node);
