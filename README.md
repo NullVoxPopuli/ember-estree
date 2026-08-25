@@ -31,6 +31,14 @@ console.log(ast.type); // "File"
 console.log(ast.program.body.length); // 2 — ImportDeclaration + ClassDeclaration
 ```
 
+Script syntax errors do not throw. oxc-parser reports them on `ast.errors`, and on an unrecoverable error it returns an empty `program.body`; check `ast.errors` to tell that apart from an empty file.
+
+```js
+let ast = toTree(`let planets = []);`);
+ast.program.body.length; // 0
+ast.errors.length; // 1
+```
+
 `parse` is a lower-level alternative that returns the `Program` node directly.
 
 ```js
