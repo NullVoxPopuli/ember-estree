@@ -184,6 +184,14 @@ describe("parse", () => {
     ]);
   });
 
+  it("keeps the export default wrapper around a default-exported template", () => {
+    const source = `export default <template>hi</template>;\n`;
+    const ast = parse(source);
+
+    expect(ast.program.body.map((node) => node.type)).toEqual(["ExportDefaultDeclaration"]);
+    expect(ast.program.body[0].declaration.type).toBe("GlimmerTemplate");
+  });
+
   it("handles multiple classes with templates", () => {
     const source = `class A extends Component {
   <template><div>A</div></template>

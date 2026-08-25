@@ -11,6 +11,11 @@ describe("print(File)", () => {
     `);
   });
 
+  it("round-trips a default-exported template", () => {
+    const source = `export default <template>hi</template>;`;
+    expect(print(toTree(source))).toBe("export default <template>hi</template>");
+  });
+
   it("prints an empty File", () => {
     const tree = toTree(``, { filePath: "m.js" });
 
