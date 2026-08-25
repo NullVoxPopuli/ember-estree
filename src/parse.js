@@ -70,6 +70,10 @@ const PLACEHOLDER_TYPES = new Set([
  * @param {function} [options.parser] - Custom JS/TS parser: (placeholderJS) => { ast, scopeManager?, visitorKeys?, services?, ... }.
  *   Recommended to return `visitorKeys` describing the parser's AST; when omitted, oxc-parser's
  *   keys are used (fine for oxc-compatible ASTs, incomplete for parsers that emit bespoke node types).
+ * @param {function} [options.onTemplateError] - Called as `(error, { range, contentRange, path })`
+ *   when a `<template>` fails to parse; `path` is the visitor path the GlimmerTemplate would have
+ *   had. When provided, parsing continues with that template left as its placeholder instead of
+ *   throwing.
  * @param {object|function} [options.visitors] - Either a map of `{ [Type]: (node, path) => void }`
  *   handlers, or a factory `(outerAst) => handlers` invoked once after parsing (before any
  *   template splicing) to give callers a view of the raw JS/TS tree. Handlers fire on every
@@ -157,7 +161,12 @@ export function toTree(source, options = {}) {
   // `placeholderNode` is the original JS/TS node being swapped out; we stash
   // it on templateInfos so consumers can forward its parser-services mapping
   // (e.g. esTreeNodeToTSNodeMap) onto the GlimmerTemplate that replaces it.
-  function processPlaceholder(parseResult, placeholderNode) {
+  //
+  // Returns `null` when the template fails to parse and the caller opted into
+  // `onTemplateError`; the placeholder then stays in the tree untouched.
+  // `placeholderPath` is where the GlimmerTemplate would have gone, handed to
+  // `onTemplateError` so callers can still tell where the template sits.
+  function processPlaceholder(parseResult, placeholderNode, placeholderPath) {
     let templateContent = parseResult.contents;
     let contentRange = [
       parseResult.contentRange.startUtf16Codepoint,
@@ -165,10 +174,18 @@ export function toTree(source, options = {}) {
     ];
     let fullRange = [parseResult.range.startUtf16Codepoint, parseResult.range.endUtf16Codepoint];
 
-    const { ast } = processTemplate(templateContent, codeLines, {
-      templateRange: contentRange,
-      tokens: generateTokens,
-    });
+    let processed;
+    try {
+      processed = processTemplate(templateContent, codeLines, {
+        templateRange: contentRange,
+        tokens: generateTokens,
+      });
+    } catch (error) {
+      if (!options.onTemplateError) throw error;
+      options.onTemplateError(error, { range: fullRange, contentRange, path: placeholderPath });
+      return null;
+    }
+    const { ast } = processed;
 
     // Fix the Template root to cover the full <template>...</template> range
     ast.range = fullRange;
@@ -245,31 +262,41 @@ export function toTree(source, options = {}) {
         // `export default <template>...</template>`: keep the export wrapper
         // and splice its declaration, so the tree (and `print`) still carry
         // the `export default`.
-        const ast = processPlaceholder(parseResult, node.declaration);
-        node.declaration = ast;
-        setParent(ast, node);
-        if (hasVisitors && !seen.has(node)) {
-          seen.add(node);
-          const handler = visitors[node.type];
-          if (handler) handler(node, path);
-          walkWithKeys(ast, path);
+        const ast = processPlaceholder(parseResult, node.declaration, {
+          node: node.declaration,
+          parent: node,
+          parentPath: path,
+        });
+        if (ast) {
+          node.declaration = ast;
+          setParent(ast, node);
+          if (hasVisitors && !seen.has(node)) {
+            seen.add(node);
+            const handler = visitors[node.type];
+            if (handler) handler(node, path);
+            walkWithKeys(ast, path);
+          }
+          return;
         }
-        return;
       } else if (parseResult) {
         // Splice in place: write the GlimmerTemplate directly into the parent's
         // slot instead of allocating new ancestor objects. This preserves node
         // identity for every ancestor, which matters for WeakMap-keyed data
         // held by custom parsers (scope manager, esTreeNodeToTSNodeMap).
-        const ast = processPlaceholder(parseResult, node);
-        const parent = parentPath?.node ?? null;
-        if (parent) replaceInParent(parent, node, ast);
-        setParent(ast, parent);
-        // Recurse into the Glimmer subtree so visitors fire on its nodes too.
-        // The Glimmer root's parentPath reflects its true JS parent — the
-        // placeholder (`void` expression / StaticBlock) is an internal artifact.
-        if (hasVisitors) walkWithKeys(ast, parentPath);
-        return;
+        const ast = processPlaceholder(parseResult, node, path);
+        if (ast) {
+          const parent = parentPath?.node ?? null;
+          if (parent) replaceInParent(parent, node, ast);
+          setParent(ast, parent);
+          // Recurse into the Glimmer subtree so visitors fire on its nodes too.
+          // The Glimmer root's parentPath reflects its true JS parent — the
+          // placeholder (`void` expression / StaticBlock) is an internal artifact.
+          if (hasVisitors) walkWithKeys(ast, parentPath);
+          return;
+        }
       }
+      // A template that failed to parse under `onTemplateError` falls through
+      // and is walked as the placeholder it still is.
     }
 
     if (hasVisitors && !seen.has(node)) {

@@ -86,6 +86,48 @@ describe("toTree — error handling", () => {
   });
 });
 
+describe("toTree — onTemplateError", () => {
+  const source = [
+    "import { on } from '@ember/modifier';",
+    "const a = <template>{{on}}</template>;",
+    "const b = <template>{{#if}}</template>;",
+    "const c = <template>{{a}}</template>;",
+    "",
+  ].join("\n");
+
+  it("continues past a template that fails to parse", () => {
+    const errors = [];
+    const visited = [];
+    const ast = toTree(source, {
+      onTemplateError: (error, template) => errors.push({ message: error.message, ...template }),
+      visitors: {
+        GlimmerTemplate: (node) => visited.push(node.start),
+      },
+    });
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toMatch(/Parse error/);
+    expect(source.slice(...errors[0].range)).toBe("<template>{{#if}}</template>");
+    expect(source.slice(...errors[0].contentRange)).toBe("{{#if}}");
+    // The path is where the GlimmerTemplate would have been spliced.
+    expect(errors[0].path.parent.type).toBe("VariableDeclarator");
+    expect(errors[0].path.parentPath.parent.type).toBe("VariableDeclaration");
+
+    // The two good templates are spliced and visited; the bad one stays as
+    // its placeholder.
+    expect(findAllNodes(ast, "GlimmerTemplate")).toHaveLength(2);
+    expect(visited).toEqual([
+      source.indexOf("<template>{{on}}"),
+      source.indexOf("<template>{{a}}"),
+    ]);
+    expect(ast.program.body[2].declarations[0].init.type).not.toBe("GlimmerTemplate");
+  });
+
+  it("still throws without the option", () => {
+    expect(() => toTree(source)).toThrow(/Parse error/);
+  });
+});
+
 describe("toTree — tokens", () => {
   it("no tokens by default", () => {
     const source = `const x = <template>Hello {{name}}</template>;`;

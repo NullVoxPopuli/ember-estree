@@ -38,6 +38,16 @@ export interface ParseOptions {
    */
   parser?: (placeholderJS: string) => { ast: ASTNode; [key: string]: unknown };
   /**
+   * Called when a `<template>` fails to parse, with the error, the template's
+   * offsets in the source, and the visitor path its `GlimmerTemplate` would
+   * have had. When provided, parsing continues and that template is left as
+   * its placeholder instead of the whole parse throwing.
+   */
+  onTemplateError?: (
+    error: Error,
+    template: { range: [number, number]; contentRange: [number, number]; path: VisitorPath },
+  ) => void;
+  /**
    * Callbacks fired on each node during traversal — outer JS/TS nodes AND
    * spliced Glimmer subtrees — so callers can gather information or mutate
    * the tree in a single pass.
