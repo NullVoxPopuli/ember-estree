@@ -10,10 +10,22 @@ export interface ASTNode {
   [key: string]: unknown;
 }
 
+export interface ParseError {
+  message: string;
+  severity?: string;
+  [key: string]: unknown;
+}
+
 export interface FileNode extends ASTNode {
   type: "File";
   program: ASTNode;
   comments: ASTNode[];
+  /**
+   * Diagnostics from the JS/TS parser (oxc-parser on the default path). On an
+   * unrecoverable script error oxc returns an empty `program.body`; check
+   * this to tell that apart from an empty file.
+   */
+  errors: ParseError[];
 }
 
 export interface TemplateResult {

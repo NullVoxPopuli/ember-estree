@@ -76,6 +76,22 @@ describe("glimmerVisitorKeys", () => {
   });
 });
 
+describe("toTree — script errors", () => {
+  it("reports oxc diagnostics on ast.errors", () => {
+    const ast = toTree("let planets = []);\nconst a = <template>hi</template>;\n");
+    expect(ast.errors.length).toBeGreaterThan(0);
+    expect(ast.errors[0].message).toMatch(/semicolon/i);
+    // oxc gives up on the whole program for this one.
+    expect(ast.program.body).toEqual([]);
+  });
+
+  it("has no errors for a valid file", () => {
+    const ast = toTree("const a = <template>hi</template>;\n");
+    expect(ast.errors).toEqual([]);
+    expect(ast.program.body).toHaveLength(1);
+  });
+});
+
 describe("toTree — error handling", () => {
   it("throws on invalid JS with a content-tag parse error", () => {
     expect(() => toTree("console.log('unterminated")).toThrow();

@@ -115,6 +115,10 @@ export function toTree(source, options = {}) {
         type: "File",
         program: oxcResult.program,
         comments: oxcResult.comments || [],
+        // oxc's diagnostics for the script. On an unrecoverable error oxc
+        // returns an empty `program.body`; this is how callers tell that apart
+        // from an empty file.
+        errors: oxcResult.errors || [],
         start: oxcResult.program.start,
         end: oxcResult.program.end,
       },
