@@ -1,5 +1,16 @@
 # Changelog
 
+## Release (2026-09-04)
+
+* ember-estree 0.8.1 (patch)
+
+#### :bug: Bug Fix
+* `ember-estree`
+  * [#84](https://github.com/NullVoxPopuli/ember-estree/pull/84) Print type arguments and end expression default exports with a semicolon ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
+#### Committers: 1
+- @NullVoxPopuli's reduced-access machine account for AI usage ([@NullVoxPopuli-ai-agent](https://github.com/NullVoxPopuli-ai-agent))
+
 ## Release (2026-08-25)
 
 * ember-estree 0.8.0 (minor)
