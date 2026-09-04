@@ -22,6 +22,35 @@ describe("parse + print (.gts)", () => {
     }
   });
 
+  it("round-trips type arguments", () => {
+    const sources = [
+      `foo<T>(a);`,
+      `new Map<string, number>();`,
+      `let z: Array<string>;`,
+      `class A extends B<C> implements D<E> {}`,
+      `interface I extends J<K> {}`,
+      `let m = make<T>;`,
+      `type T = typeof x<Y>;`,
+      `type U = import('./mod').Thing<V>;`,
+      `export default x satisfies TOC<Sig>;`,
+    ];
+    for (const source of sources) {
+      expect(print(parse(source, { filePath: "x.gts" }).program)).toBe(source);
+    }
+  });
+
+  it("ends an expression `export default` with a semicolon", () => {
+    const sources = [
+      `export default foo;`,
+      `export default <template>hi</template>;`,
+      `export default class Foo {}`,
+      `export default function foo() {}`,
+    ];
+    for (const source of sources) {
+      expect(print(parse(source, { filePath: "x.gts" }).program)).toBe(source);
+    }
+  });
+
   it("parses a gts-style file with a class component", () => {
     const source = `
 import Component from '@glimmer/component';

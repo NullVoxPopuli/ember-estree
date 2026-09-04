@@ -170,7 +170,7 @@ export function print(node) {
     case "CallExpression":
     case "OptionalCallExpression": {
       const callee = print(node.callee);
-      const typeArgs = node.typeParameters ? print(node.typeParameters) : "";
+      const typeArgs = printTypeArguments(node);
       const args = (node.arguments ?? []).map(print).join(", ");
       const opt = node.optional ? "?." : "";
       return `${callee}${opt}${typeArgs}(${args})`;
@@ -253,11 +253,11 @@ export function print(node) {
       return `await ${print(node.argument)}`;
 
     case "TaggedTemplateExpression":
-      return `${print(node.tag)}${print(node.quasi)}`;
+      return `${print(node.tag)}${printTypeArguments(node)}${print(node.quasi)}`;
 
     case "NewExpression": {
       const callee = print(node.callee);
-      const typeArgs = node.typeParameters ? print(node.typeParameters) : "";
+      const typeArgs = printTypeArguments(node);
       const args = (node.arguments ?? []).map(print).join(", ");
       return `new ${callee}${typeArgs}(${args})`;
     }
@@ -426,7 +426,8 @@ export function print(node) {
       const id = node.id ? ` ${print(node.id)}` : "";
       const typeParams = node.typeParameters ? print(node.typeParameters) : "";
       const superClass = node.superClass ? ` extends ${print(node.superClass)}` : "";
-      const superTypeParams = node.superTypeParameters ? print(node.superTypeParameters) : "";
+      const superTypeArgs = node.superTypeArguments ?? node.superTypeParameters;
+      const superTypeParams = superTypeArgs ? print(superTypeArgs) : "";
       const impls = (node.implements ?? []).map(print);
       const implStr = impls.length ? ` implements ${impls.join(", ")}` : "";
       const body = print(node.body);
@@ -515,8 +516,13 @@ export function print(node) {
     case "ImportAttribute":
       return `${print(node.key)}: ${print(node.value)}`;
 
-    case "ExportDefaultDeclaration":
-      return `export default ${print(node.declaration)}`;
+    case "ExportDefaultDeclaration": {
+      const declaration = print(node.declaration);
+      // Function and class declarations end themselves. Anything else is an
+      // expression, and `export default x\n(y)` would otherwise parse as a call.
+      const semi = node.declaration?.type?.endsWith("Declaration") ? "" : ";";
+      return `export default ${declaration}${semi}`;
+    }
 
     case "ExportNamedDeclaration":
       if (node.declaration) return `export ${print(node.declaration)}`;
@@ -619,8 +625,7 @@ export function print(node) {
 
     case "TSTypeReference": {
       const name = print(node.typeName);
-      const params = node.typeParameters ? print(node.typeParameters) : "";
-      return `${name}${params}`;
+      return `${name}${printTypeArguments(node)}`;
     }
 
     case "TSQualifiedName":
@@ -789,8 +794,7 @@ export function print(node) {
     case "TSInterfaceHeritage":
     case "TSClassImplements": {
       const expr = print(node.expression);
-      const typeParams = node.typeParameters ? print(node.typeParameters) : "";
-      return `${expr}${typeParams}`;
+      return `${expr}${printTypeArguments(node)}`;
     }
 
     case "TSTypeAliasDeclaration": {
@@ -850,8 +854,7 @@ export function print(node) {
 
     case "TSInstantiationExpression": {
       const expr = print(node.expression);
-      const typeParams = node.typeParameters ? print(node.typeParameters) : "";
-      return `${expr}${typeParams}`;
+      return `${expr}${printTypeArguments(node)}`;
     }
 
     // ── TypeScript: imports & exports ──────────────────────────────
@@ -868,10 +871,9 @@ export function print(node) {
       return `export = ${print(node.expression)};`;
 
     case "TSImportType": {
-      const arg = print(node.parameter);
+      const arg = print(node.source ?? node.parameter ?? node.argument);
       const qualifier = node.qualifier ? `.${print(node.qualifier)}` : "";
-      const typeParams = node.typeParameters ? print(node.typeParameters) : "";
-      return `import(${arg})${qualifier}${typeParams}`;
+      return `import(${arg})${qualifier}${printTypeArguments(node)}`;
     }
 
     // ── TypeScript: parameter & type modifiers ─────────────────────
@@ -893,8 +895,7 @@ export function print(node) {
 
     case "TSTypeQuery": {
       const name = print(node.exprName);
-      const typeParams = node.typeParameters ? print(node.typeParameters) : "";
-      return `typeof ${name}${typeParams}`;
+      return `typeof ${name}${printTypeArguments(node)}`;
     }
 
     case "TSEmptyBodyFunctionExpression": {
@@ -1042,6 +1043,18 @@ export function print(node) {
     default:
       throw new Error(`ember-estree print: unsupported node type '${node.type}'`);
   }
+}
+
+/**
+ * Prints the `<...>` type arguments of a call, `new`, tagged template, type
+ * reference, or heritage clause. oxc-parser and typescript-estree v8 put
+ * them on `typeArguments`; older typescript-estree used `typeParameters`.
+ * @param {object} node
+ * @return {string}
+ */
+function printTypeArguments(node) {
+  const args = node.typeArguments ?? node.typeParameters;
+  return args ? print(args) : "";
 }
 
 /**
