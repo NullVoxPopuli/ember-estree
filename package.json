@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@glimmer/env": "^0.1.7",
-    "@glimmer/syntax": "^0.95.0",
+    "@glimmer/syntax": ">= 0.95.0",
     "content-tag": "^4.2.0",
     "oxc-parser": "^0.130.0"
   },
