@@ -1,5 +1,16 @@
 # Changelog
 
+## Release (2026-10-21)
+
+* ember-estree 0.9.0 (minor)
+
+#### :rocket: Enhancement
+* `ember-estree`
+  * [#86](https://github.com/NullVoxPopuli/ember-estree/pull/86) Widen @glimmer/syntax range to >= 0.95.0 ([@johanrd](https://github.com/johanrd))
+
+#### Committers: 1
+- Johan Røed ([@johanrd](https://github.com/johanrd))
+
 ## Release (2026-09-04)
 
 * ember-estree 0.8.1 (patch)
